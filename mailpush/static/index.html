@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MailPush Dashboard</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>📬 MailPush</h1>
+    <div class="status-bar">
+      <span id="uptime">--</span>
+      <span id="acct-count">--</span>
+      <span id="conn-status" class="dot"></span>
+    </div>
+  </header>
+
+  <nav>
+    <button class="tab active" data-tab="emails">📧 Emails</button>
+    <button class="tab" data-tab="accounts">🔐 Accounts</button>
+    <button class="tab" data-tab="webhooks">🪝 Webhooks</button>
+    <button class="tab" data-tab="config">⚙️ Config</button>
+  </nav>
+
+  <!-- EMAILS TAB -->
+  <section id="tab-emails" class="tab-content active">
+    <div class="toolbar">
+      <select id="email-filter-acct">
+        <option value="">All Accounts</option>
+      </select>
+      <button onclick="refreshEmails()">🔄 Refresh</button>
+      <span id="email-count" class="badge">0</span>
+    </div>
+    <div id="email-list" class="card-list"></div>
+  </section>
+
+  <!-- ACCOUNTS TAB -->
+  <section id="tab-accounts" class="tab-content">
+    <button class="btn-primary" onclick="showAddAccount()">+ Add Account</button>
+    <div id="account-list" class="card-list"></div>
+    <div id="add-account-form" class="modal hidden">
+      <h3>Add Email Account</h3>
+      <input id="acct-name" placeholder="Account name (e.g. QQ, Gmail)">
+      <input id="acct-host" placeholder="IMAP host (e.g. imap.qq.com)">
+      <input id="acct-port" type="number" value="993" placeholder="Port">
+      <input id="acct-user" placeholder="Username">
+      <input id="acct-pass" type="password" placeholder="Password / App password">
+      <div class="btn-row">
+        <button class="btn-primary" onclick="addAccount()">Add</button>
+        <button onclick="hideAddAccount()">Cancel</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- WEBHOOKS TAB -->
+  <section id="tab-webhooks" class="tab-content">
+    <button class="btn-primary" onclick="showAddWebhook()">+ Add Webhook</button>
+    <div id="webhook-list" class="card-list"></div>
+    <div id="add-webhook-form" class="modal hidden">
+      <h3>Register Webhook</h3>
+      <input id="wh-url" placeholder="https://your-agent.com/webhook">
+      <input id="wh-secret" placeholder="HMAC secret (optional)">
+      <div class="btn-row">
+        <button class="btn-primary" onclick="addWebhook()">Register</button>
+        <button onclick="hideAddWebhook()">Cancel</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONFIG TAB -->
+  <section id="tab-config" class="tab-content">
+    <div id="config-form">
+      <label><input type="checkbox" id="cfg-translate"> Translate subjects</label>
+      <label><input type="checkbox" id="cfg-summary"> Extract summaries</label>
+      <label><input type="checkbox" id="cfg-attachments"> Show attachments</label>
+      <label><input type="checkbox" id="cfg-merge"> Merge batch</label>
+      <label>Merge interval: <input type="number" id="cfg-merge-interval" min="5" max="300" value="30"> sec</label>
+      <button class="btn-primary" onclick="saveConfig()">Save</button>
+    </div>
+  </section>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

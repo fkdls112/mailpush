@@ -1,0 +1,35 @@
+# Bytecode
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Virtualenv
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Config (contains credentials)
+*.json
+!pyproject.toml
+config.json
+state.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Systemd / deployment configs (contain paths/tokens)
+*.service
+deploy/

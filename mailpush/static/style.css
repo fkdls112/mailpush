@@ -1,0 +1,111 @@
+/* MailPush Dashboard Styles */
+
+:root {
+  --bg: #0d1117;
+  --card: #161b22;
+  --border: #30363d;
+  --text: #c9d1d9;
+  --dim: #8b949e;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --red: #f85149;
+  --radius: 8px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+header h1 { font-size: 24px; }
+.status-bar { display: flex; gap: 16px; align-items: center; font-size: 13px; color: var(--dim); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+.dot.offline { background: var(--red); }
+
+nav { display: flex; gap: 4px; margin-bottom: 16px; }
+.tab {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--dim);
+  padding: 8px 16px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  cursor: pointer;
+  font-size: 14px;
+}
+.tab.active { color: var(--text); border-bottom-color: var(--bg); background: var(--bg); }
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.toolbar {
+  display: flex; gap: 8px; align-items: center;
+  margin-bottom: 12px;
+}
+.toolbar select, .toolbar input {
+  background: var(--card); border: 1px solid var(--border);
+  color: var(--text); padding: 6px 10px; border-radius: var(--radius);
+}
+.badge { background: var(--accent); color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
+
+.card-list { display: flex; flex-direction: column; gap: 8px; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+}
+.card .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.card .sender { color: var(--accent); font-weight: 600; font-size: 14px; }
+.card .subject { font-size: 14px; margin-bottom: 6px; }
+.card .subject-cn { color: var(--dim); font-size: 13px; }
+.card .body-preview { color: var(--dim); font-size: 13px; margin-bottom: 8px; white-space: pre-wrap; }
+.card .summary { font-size: 12px; color: var(--green); }
+.card .summary span { display: inline-block; margin-right: 12px; }
+.card .time { font-size: 11px; color: var(--dim); }
+.card .acct-tag { font-size: 11px; background: var(--border); padding: 2px 6px; border-radius: 4px; color: var(--dim); }
+
+.btn-primary {
+  background: var(--accent); color: #fff; border: none;
+  padding: 8px 16px; border-radius: var(--radius); cursor: pointer;
+  font-size: 14px; margin-bottom: 12px;
+}
+.btn-row { display: flex; gap: 8px; margin-top: 12px; }
+button { cursor: pointer; }
+
+.modal {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px; margin-top: 12px;
+}
+.modal input {
+  display: block; width: 100%; margin-bottom: 8px;
+  background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); padding: 8px 10px; border-radius: var(--radius);
+}
+.hidden { display: none; }
+
+#config-form label {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 12px; font-size: 14px;
+}
+#config-form input[type="checkbox"] { width: 18px; height: 18px; }
+#config-form input[type="number"] {
+  width: 80px; background: var(--card); border: 1px solid var(--border);
+  color: var(--text); padding: 4px 8px; border-radius: var(--radius);
+}
+
+.empty { color: var(--dim); text-align: center; padding: 40px; font-size: 14px; }

@@ -1,0 +1,1 @@
+# MailPush — data models
