@@ -1,6 +1,6 @@
 """Rule-based email summary — extracts IPs, amounts, URLs, codes."""
 import re
-from .models import EmailSummary
+from mailpush.core.events import EmailSummary
 
 
 def extract(body: str) -> EmailSummary:

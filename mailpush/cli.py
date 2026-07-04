@@ -2,12 +2,26 @@
 import argparse
 import asyncio
 import json
+import secrets
 import sys
 from pathlib import Path
 
 import uvicorn
 
-from . import config as config_mgr
+from mailpush.core import config as config_mgr
+
+
+def _require_auth():
+    """Prompt for master password before config write operations."""
+    cfg = config_mgr.load()
+    api_token = cfg.get('api_token', '')
+    if not api_token:
+        print('Error: No api_token configured. Set api_token in config.json first.')
+        sys.exit(1)
+    password = input('Enter master password: ').strip()
+    if not secrets.compare_digest(password, api_token):
+        print('Error: Invalid password.')
+        sys.exit(1)
 
 
 def main():
@@ -76,7 +90,7 @@ def main():
         host = args.host or server_cfg.get('host', '127.0.0.1')
         port = args.port or server_cfg.get('port', 8080)
         uvicorn.run(
-            'mailpush.server:app',
+            'mailpush.api.server:app',
             host=host,
             port=port,
             reload=args.reload,
@@ -87,12 +101,14 @@ def main():
         cfg = config_mgr.load()
         print('Configured accounts:')
         for a in cfg.get('accounts', []):
-            print(f'  {a["name"]} — {a["host"]}:{a.get("port", 993)} ({a["username"]})')
+            enabled = '' if a.get('enabled', True) else ' [disabled]'
+            print(f'  {a["name"]} — {a["host"]}:{a.get("port", 993)} ({a["username"]}){enabled}')
         print()
         print('Server must be running for live status. Call GET /api/health.')
 
     elif args.command == 'config':
         if args.config_action == 'init':
+            _require_auth()
             cfg_path = args.path
             cfg = config_mgr.load(cfg_path)
             print(f'Config created at: {cfg_path or config_mgr._default_path()}')
@@ -104,6 +120,8 @@ def main():
             for a in safe.get('accounts', []):
                 a['password'] = '***'
                 a['smtp_password'] = '***'
+                if isinstance(a.get('smtp'), dict):
+                    a['smtp']['password'] = '***'
             print(json.dumps(safe, indent=2, ensure_ascii=False))
 
     elif args.command == 'accounts':
@@ -112,14 +130,20 @@ def main():
             if not cfg.get('accounts'):
                 print('No accounts configured.')
             for a in cfg.get('accounts', []):
-                smtp = f', SMTP: {a.get("smtp_host", "N/A")}' if a.get('smtp_host') else ''
-                print(f'  {a["name"]} — {a["host"]}:{a.get("port", 993)} ({a["username"]}){smtp}')
+                smtp_info = ''
+                smtp_host = (a.get('smtp') or {}).get('host') or a.get('smtp_host')
+                if smtp_host:
+                    smtp_info = f', SMTP: {smtp_host}'
+                enabled = '' if a.get('enabled', True) else ' [disabled]'
+                print(f'  {a["name"]} — {a["host"]}:{a.get("port", 993)} ({a["username"]}){smtp_info}{enabled}')
 
         elif args.acct_action == 'add':
+            _require_auth()
             cfg = config_mgr.load()
             cfg.setdefault('accounts', []).append({
                 'name': args.name, 'host': args.host, 'port': args.port,
                 'username': args.user, 'password': args.password,
+                'enabled': True, 'type': 'imap',
                 'smtp_host': args.smtp_host, 'smtp_port': args.smtp_port,
                 'smtp_username': args.smtp_user or args.user,
                 'smtp_password': args.smtp_pass or args.password,
@@ -128,6 +152,7 @@ def main():
             print(f'Account "{args.name}" added.')
 
         elif args.acct_action == 'remove':
+            _require_auth()
             cfg = config_mgr.load()
             before = len(cfg.get('accounts', []))
             cfg['accounts'] = [a for a in cfg.get('accounts', []) if a['name'] != args.name]
@@ -147,18 +172,20 @@ def main():
 
     elif args.command == 'webhook':
         if args.wh_action == 'add':
-            from . import webhook as wh
+            _require_auth()
+            from mailpush import webhook as wh
             entry = wh.register(args.url, args.secret)
             print(f'Webhook registered: {entry.id} → {args.url}')
         elif args.wh_action == 'list':
-            from . import webhook as wh
+            from mailpush import webhook as wh
             hooks = wh.list_all()
             if not hooks:
                 print('No webhooks registered.')
             for h in hooks:
                 print(f'  {h.id} → {h.url} (created: {h.created_at})')
         elif args.wh_action == 'remove':
-            from . import webhook as wh
+            _require_auth()
+            from mailpush import webhook as wh
             if wh.unregister(args.wid):
                 print(f'Webhook "{args.wid}" removed.')
             else:

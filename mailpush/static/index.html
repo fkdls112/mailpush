@@ -18,14 +18,55 @@
   </header>
 
   <nav>
-    <button class="tab active" data-tab="emails">📧 Emails</button>
+    <button class="tab active" data-tab="overview">🏠 Overview</button>
+    <button class="tab" data-tab="emails">📧 Emails</button>
     <button class="tab" data-tab="accounts">🔐 Accounts</button>
+    <button class="tab" data-tab="deliveries">🚀 Deliveries</button>
+    <button class="tab" data-tab="routes">🔀 Routes</button>
     <button class="tab" data-tab="webhooks">🪝 Webhooks</button>
+    <button class="tab" data-tab="logs">📋 Logs</button>
     <button class="tab" data-tab="config">⚙️ Config</button>
   </nav>
 
+  <!-- OVERVIEW TAB -->
+  <section id="tab-overview" class="tab-content active">
+    <div class="overview-grid">
+      <div class="stat-card">
+        <div class="stat-label">Uptime</div>
+        <div class="stat-value" id="ov-uptime">--</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Accounts</div>
+        <div class="stat-value" id="ov-accounts">--</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Emails (buffer)</div>
+        <div class="stat-value" id="ov-emails">--</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Deliveries</div>
+        <div class="stat-value" id="ov-deliveries">--</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Webhooks</div>
+        <div class="stat-value" id="ov-webhooks">--</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Routes</div>
+        <div class="stat-value" id="ov-routes">--</div>
+      </div>
+    </div>
+    <div class="toolbar" style="margin-top:16px">
+      <button class="btn-primary" onclick="testAllDeliveries()">🧪 Test All Deliveries</button>
+      <button onclick="refreshOverview()">🔄 Refresh</button>
+    </div>
+    <div id="overview-delivery-result" class="result-box hidden"></div>
+    <h3 style="margin:16px 0 8px">Recent Emails</h3>
+    <div id="ov-email-list" class="card-list"></div>
+  </section>
+
   <!-- EMAILS TAB -->
-  <section id="tab-emails" class="tab-content active">
+  <section id="tab-emails" class="tab-content">
     <div class="toolbar">
       <select id="email-filter-acct">
         <option value="">All Accounts</option>
@@ -38,7 +79,9 @@
 
   <!-- ACCOUNTS TAB -->
   <section id="tab-accounts" class="tab-content">
-    <button class="btn-primary" onclick="showAddAccount()">+ Add Account</button>
+    <div class="toolbar">
+      <button class="btn-primary" onclick="showAddAccount()">+ Add Account</button>
+    </div>
     <div id="account-list" class="card-list"></div>
     <div id="add-account-form" class="modal hidden">
       <h3>Add Email Account</h3>
@@ -54,9 +97,57 @@
     </div>
   </section>
 
+  <!-- DELIVERIES TAB -->
+  <section id="tab-deliveries" class="tab-content">
+    <div class="toolbar">
+      <button class="btn-primary" onclick="showAddDelivery()">+ Add Adapter</button>
+      <button onclick="testAllDeliveries()">🧪 Test All</button>
+    </div>
+    <div id="delivery-list" class="card-list"></div>
+    <div id="add-delivery-form" class="modal hidden">
+      <h3>Add Delivery Adapter</h3>
+      <input id="dlv-name" placeholder="Unique name (e.g. hermes-main)">
+      <select id="dlv-type">
+        <option value="hermes">hermes</option>
+        <option value="http">http</option>
+        <option value="webhook">webhook</option>
+        <option value="command">command</option>
+        <option value="openclaw">openclaw</option>
+      </select>
+      <textarea id="dlv-config" rows="4" placeholder='Config JSON, e.g. {"target":"wechat"}'></textarea>
+      <div class="btn-row">
+        <button class="btn-primary" onclick="addDelivery()">Add</button>
+        <button onclick="hideAddDelivery()">Cancel</button>
+      </div>
+    </div>
+    <div id="delivery-test-result" class="result-box hidden"></div>
+  </section>
+
+  <!-- ROUTES TAB -->
+  <section id="tab-routes" class="tab-content">
+    <div class="toolbar">
+      <button class="btn-primary" onclick="showAddRoute()">+ Add Route Rule</button>
+    </div>
+    <div id="route-list" class="card-list"></div>
+    <div id="add-route-form" class="modal hidden">
+      <h3>Add Route Rule</h3>
+      <input id="rt-name" placeholder="Rule name (optional)">
+      <input id="rt-account" placeholder='Match accounts (comma-sep, e.g. QQ,Gmail)'>
+      <input id="rt-sender" placeholder="sender_contains (optional)">
+      <input id="rt-subject" placeholder="subject_contains keyword (optional)">
+      <input id="rt-adapters" placeholder="Adapter names (comma-sep, e.g. hermes-main)">
+      <div class="btn-row">
+        <button class="btn-primary" onclick="addRoute()">Add</button>
+        <button onclick="hideAddRoute()">Cancel</button>
+      </div>
+    </div>
+  </section>
+
   <!-- WEBHOOKS TAB -->
   <section id="tab-webhooks" class="tab-content">
-    <button class="btn-primary" onclick="showAddWebhook()">+ Add Webhook</button>
+    <div class="toolbar">
+      <button class="btn-primary" onclick="showAddWebhook()">+ Add Webhook</button>
+    </div>
     <div id="webhook-list" class="card-list"></div>
     <div id="add-webhook-form" class="modal hidden">
       <h3>Register Webhook</h3>
@@ -67,6 +158,16 @@
         <button onclick="hideAddWebhook()">Cancel</button>
       </div>
     </div>
+  </section>
+
+  <!-- LOGS TAB -->
+  <section id="tab-logs" class="tab-content">
+    <div class="toolbar">
+      <button onclick="refreshLogs()">🔄 Refresh</button>
+      <button onclick="clearLogs()">🗑 Clear</button>
+      <span class="badge" id="log-count">0</span>
+    </div>
+    <div id="log-list" class="log-panel"></div>
   </section>
 
   <!-- CONFIG TAB -->

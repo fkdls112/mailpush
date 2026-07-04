@@ -11,9 +11,3 @@ venv/
 .DS_Store
 docker-compose.override.yml
 mailpush.bak/
-
-# Security: NEVER commit config files with secrets
-config.json
-*.secrets.baseline
-docker/mailpush-config/
-**/config.local.json

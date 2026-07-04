@@ -109,3 +109,119 @@ button { cursor: pointer; }
 }
 
 .empty { color: var(--dim); text-align: center; padding: 40px; font-size: 14px; }
+
+/* ── Overview grid ── */
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+.stat-label { font-size: 11px; color: var(--dim); text-transform: uppercase; margin-bottom: 6px; }
+.stat-value { font-size: 20px; font-weight: 600; color: var(--accent); }
+
+/* ── Small action buttons ── */
+.btn-sm {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 3px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 12px;
+}
+.btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+.btn-danger { color: var(--red) !important; }
+.btn-danger:hover { border-color: var(--red) !important; }
+
+/* ── Type tag ── */
+.type-tag {
+  font-size: 11px;
+  background: var(--border);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--dim);
+  margin-left: 6px;
+}
+
+/* ── Result boxes ── */
+.result-box {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+.result-ok  { border-color: var(--green); color: var(--green); }
+.result-err { border-color: var(--red);   color: var(--red); }
+
+/* ── Log panel ── */
+.log-panel {
+  font-family: monospace;
+  font-size: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+.log-entry {
+  display: flex;
+  gap: 10px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border);
+}
+.log-ts  { color: var(--dim); min-width: 70px; }
+.log-lvl { min-width: 40px; font-weight: 600; }
+.log-info  .log-lvl { color: var(--accent); }
+.log-warn  .log-lvl { color: #e3b341; }
+.log-error .log-lvl { color: var(--red); }
+
+/* ── Textarea in modal ── */
+.modal textarea {
+  display: block;
+  width: 100%;
+  margin-bottom: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  resize: vertical;
+  font-family: monospace;
+  font-size: 13px;
+}
+.modal select {
+  display: block;
+  width: 100%;
+  margin-bottom: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: var(--radius);
+}
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--card);
+  border: 1px solid var(--green);
+  color: var(--green);
+  padding: 10px 18px;
+  border-radius: var(--radius);
+  font-size: 14px;
+  z-index: 9999;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+.toast.toast-err { border-color: var(--red); color: var(--red); }
