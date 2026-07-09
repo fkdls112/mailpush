@@ -1,0 +1,1986 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MailPush 管理面板</title>
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #101217;
+  --panel: #171a22;
+  --panel-2: #1f2330;
+  --panel-3: #252a36;
+  --sidebar: #1a1a2e;
+  --sidebar-2: #24243f;
+  --line: rgba(164, 176, 190, 0.16);
+  --line-strong: rgba(164, 176, 190, 0.28);
+  --text: #edf0f4;
+  --muted: #a7b0bd;
+  --muted-2: #7e8795;
+  --blue: #8aa3b8;
+  --green: #8aa79b;
+  --gold: #c3a35c;
+  --red: #c77d7d;
+  --shadow: 0 18px 44px rgba(0, 0, 0, 0.35);
+  --radius: 12px;
+  --speed: 0.2s ease;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 22% 0%, rgba(138, 163, 184, 0.14), transparent 32rem),
+    radial-gradient(circle at 100% 20%, rgba(138, 167, 155, 0.10), transparent 34rem),
+    var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+  line-height: 1.5;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.login-view {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.login-card {
+  width: min(420px, 100%);
+  padding: 34px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(31, 35, 48, 0.96), rgba(23, 26, 34, 0.98));
+  box-shadow: var(--shadow);
+}
+
+.login-mark {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: rgba(138, 163, 184, 0.16);
+  border: 1px solid rgba(138, 163, 184, 0.24);
+  font-size: 28px;
+}
+
+.login-card h1 {
+  margin: 18px 0 6px;
+  font-size: 30px;
+  letter-spacing: 0;
+}
+
+.login-card p {
+  margin: 0 0 24px;
+  color: var(--muted);
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.field label {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.control,
+.select,
+.textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(16, 18, 23, 0.78);
+  color: var(--text);
+  outline: none;
+  transition: border-color var(--speed), box-shadow var(--speed), background var(--speed);
+}
+
+.control,
+.select {
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.textarea {
+  min-height: 170px;
+  padding: 12px;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.control:focus,
+.select:focus,
+.textarea:focus {
+  border-color: rgba(138, 163, 184, 0.78);
+  box-shadow: 0 0 0 3px rgba(138, 163, 184, 0.13);
+  background: rgba(16, 18, 23, 0.96);
+}
+
+.login-error {
+  min-height: 22px;
+  margin: 8px 0 14px;
+  color: var(--red);
+  font-size: 13px;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, var(--sidebar), var(--sidebar-2));
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  z-index: 30;
+}
+
+.brand {
+  padding: 22px 20px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.brand-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 760;
+  font-size: 18px;
+}
+
+.brand-subtitle {
+  margin-top: 5px;
+  color: rgba(237, 240, 244, 0.58);
+  font-size: 12px;
+}
+
+.nav {
+  display: grid;
+  gap: 6px;
+  padding: 16px 12px;
+}
+
+.nav-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(237, 240, 244, 0.76);
+  text-align: left;
+  transition: background var(--speed), color var(--speed), border-color var(--speed);
+}
+
+.nav-button:hover,
+.nav-button.active {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.nav-button.active {
+  box-shadow: inset 3px 0 0 var(--gold);
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.session-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: rgba(237, 240, 244, 0.68);
+  font-size: 12px;
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--muted-2);
+  box-shadow: 0 0 0 4px rgba(126, 135, 149, 0.12);
+}
+
+.dot.ok {
+  background: var(--green);
+  box-shadow: 0 0 0 4px rgba(138, 167, 155, 0.12);
+}
+
+.dot.bad {
+  background: var(--red);
+  box-shadow: 0 0 0 4px rgba(199, 125, 125, 0.12);
+}
+
+.content {
+  min-width: 0;
+  padding: 28px;
+}
+
+.mobile-bar {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 58px;
+  padding: 0 16px;
+  background: rgba(16, 18, 23, 0.88);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(14px);
+}
+
+.mobile-title {
+  font-weight: 740;
+}
+
+.backdrop {
+  display: none;
+}
+
+.page {
+  display: none;
+}
+
+.page.active {
+  display: block;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: 0;
+}
+
+.page-desc {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.btn {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(31, 35, 48, 0.78);
+  color: var(--text);
+  transition: transform var(--speed), border-color var(--speed), background var(--speed), color var(--speed);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+  background: rgba(37, 42, 54, 0.96);
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+}
+
+.btn-primary {
+  border-color: rgba(138, 163, 184, 0.32);
+  background: linear-gradient(180deg, rgba(138, 163, 184, 0.34), rgba(138, 163, 184, 0.18));
+}
+
+.btn-green {
+  border-color: rgba(138, 167, 155, 0.34);
+  background: linear-gradient(180deg, rgba(138, 167, 155, 0.30), rgba(138, 167, 155, 0.14));
+}
+
+.btn-gold {
+  border-color: rgba(195, 163, 92, 0.36);
+  background: linear-gradient(180deg, rgba(195, 163, 92, 0.28), rgba(195, 163, 92, 0.13));
+}
+
+.btn-danger {
+  border-color: rgba(199, 125, 125, 0.34);
+  color: #ffd6d6;
+  background: rgba(199, 125, 125, 0.12);
+}
+
+.btn-ghost {
+  background: transparent;
+}
+
+.icon-btn {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+}
+
+.metric-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 16px;
+}
+
+.panel {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(23, 26, 34, 0.86);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16);
+}
+
+.metric {
+  min-height: 116px;
+  padding: 18px;
+}
+
+.metric-label {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.metric-value {
+  margin-top: 12px;
+  font-size: 30px;
+  font-weight: 760;
+  letter-spacing: 0;
+}
+
+.metric-hint {
+  margin-top: 6px;
+  color: var(--muted-2);
+  font-size: 12px;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 16px;
+}
+
+.panel-body {
+  padding: 18px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.toolbar-left,
+.toolbar-right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
+
+th,
+td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: middle;
+}
+
+th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 680;
+}
+
+tbody tr {
+  transition: background var(--speed);
+}
+
+tbody tr:hover {
+  background: rgba(138, 163, 184, 0.06);
+}
+
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.status-pill,
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.status-pill.ok {
+  color: #dff2e9;
+  border-color: rgba(138, 167, 155, 0.34);
+  background: rgba(138, 167, 155, 0.12);
+}
+
+.status-pill.bad {
+  color: #ffd6d6;
+  border-color: rgba(199, 125, 125, 0.34);
+  background: rgba(199, 125, 125, 0.12);
+}
+
+.text-muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 12px;
+}
+
+.empty {
+  padding: 34px 18px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.email-list,
+.delivery-list {
+  display: grid;
+  gap: 12px;
+}
+
+.email-card,
+.delivery-card {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(31, 35, 48, 0.58);
+  transition: border-color var(--speed), background var(--speed);
+}
+
+.email-card:hover,
+.delivery-card:hover {
+  border-color: var(--line-strong);
+  background: rgba(37, 42, 54, 0.78);
+}
+
+.email-top,
+.delivery-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.email-title,
+.delivery-title {
+  margin: 8px 0 5px;
+  font-size: 16px;
+  font-weight: 720;
+}
+
+.email-meta,
+.delivery-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.email-preview {
+  margin: 10px 0 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.config-summary {
+  max-height: 520px;
+  overflow: auto;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(16, 18, 23, 0.86);
+  color: #d9dee7;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.hint-box {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid rgba(195, 163, 92, 0.24);
+  border-radius: var(--radius);
+  background: rgba(195, 163, 92, 0.08);
+  color: #e8dcc0;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: none;
+  place-items: center;
+  padding: 22px;
+  background: rgba(0, 0, 0, 0.62);
+}
+
+.modal.open {
+  display: grid;
+}
+
+.modal-card {
+  width: min(760px, 100%);
+  max-height: min(88vh, 820px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #171a22;
+  box-shadow: var(--shadow);
+}
+
+.modal-head,
+.modal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+}
+
+.modal-head {
+  border-bottom: 1px solid var(--line);
+}
+
+.modal-foot {
+  border-top: 1px solid var(--line);
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 18px;
+}
+
+.modal-body {
+  overflow: auto;
+  padding: 18px;
+}
+
+.steps {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.step {
+  flex: 1;
+  min-height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.step.active {
+  background: linear-gradient(90deg, var(--blue), var(--gold));
+}
+
+.provider-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.provider-card {
+  min-height: 118px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(31, 35, 48, 0.68);
+  color: var(--text);
+  text-align: left;
+  transition: border-color var(--speed), transform var(--speed), background var(--speed);
+}
+
+.provider-card:hover,
+.provider-card.active {
+  transform: translateY(-1px);
+  border-color: rgba(138, 163, 184, 0.54);
+  background: rgba(37, 42, 54, 0.92);
+}
+
+.provider-icon {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 26px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.form-grid .span-2 {
+  grid-column: 1 / -1;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  color: var(--muted);
+}
+
+.toast-stack {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 90;
+  display: grid;
+  gap: 10px;
+  width: min(380px, calc(100vw - 36px));
+}
+
+.toast {
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(31, 35, 48, 0.96);
+  box-shadow: var(--shadow);
+  color: var(--text);
+}
+
+.toast.ok {
+  border-color: rgba(138, 167, 155, 0.36);
+}
+
+.toast.error {
+  border-color: rgba(199, 125, 125, 0.42);
+}
+
+@media (max-width: 1100px) {
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .app-shell {
+    display: block;
+  }
+
+  .mobile-bar {
+    display: flex;
+  }
+
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 220px;
+    transform: translateX(-105%);
+    transition: transform var(--speed);
+  }
+
+  body.nav-open .sidebar {
+    transform: translateX(0);
+  }
+
+  body.nav-open .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .content {
+    padding: 20px 16px 28px;
+  }
+
+  .page-header,
+  .toolbar,
+  .email-top,
+  .delivery-top {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .actions,
+  .toolbar-left,
+  .toolbar-right {
+    justify-content: stretch;
+  }
+
+  .actions .btn,
+  .toolbar .btn,
+  .toolbar .select {
+    width: 100%;
+  }
+
+  .provider-grid,
+  .form-grid,
+  .metric-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .login-card {
+    padding: 24px;
+  }
+
+  .modal {
+    padding: 12px;
+  }
+
+  .modal-head,
+  .modal-foot {
+    padding: 14px;
+  }
+
+  .modal-body {
+    padding: 14px;
+  }
+}
+</style>
+</head>
+<body>
+<div id="login-view" class="login-view">
+  <section class="login-card" aria-label="登录">
+    <div class="login-mark">📬</div>
+    <h1>MailPush</h1>
+    <p>实时邮件推送管理面板</p>
+    <form id="login-form" autocomplete="off">
+      <div class="field">
+        <label for="token-input">API Token</label>
+        <input id="token-input" class="control" type="password" placeholder="输入 API Token" autocomplete="current-password" autofocus>
+      </div>
+      <div id="login-error" class="login-error" role="alert"></div>
+      <button id="login-submit" type="submit" class="btn btn-primary" style="width: 100%;">登录</button>
+    </form>
+  </section>
+</div>
+
+<div id="app-shell" class="app-shell hidden">
+  <aside class="sidebar" aria-label="主导航">
+    <div class="brand">
+      <div class="brand-title"><span>📬</span><span>MailPush</span></div>
+      <div class="brand-subtitle">管理面板</div>
+    </div>
+    <nav class="nav">
+      <button class="nav-button active" type="button" data-view="overview">📊 <span>概览</span></button>
+      <button class="nav-button" type="button" data-view="emails">📧 <span>邮件</span></button>
+      <button class="nav-button" type="button" data-view="accounts">🔐 <span>账户设置</span></button>
+      <button class="nav-button" type="button" data-view="deliveries">🚀 <span>推送通道</span></button>
+      <button class="nav-button" type="button" data-view="settings">⚙️ <span>系统设置</span></button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="session-status"><span id="session-dot" class="dot"></span><span id="session-text">等待连接</span></div>
+      <button id="logout-btn" type="button" class="btn btn-ghost" style="width: 100%;">退出登录</button>
+    </div>
+  </aside>
+
+  <div id="nav-backdrop" class="backdrop"></div>
+
+  <div>
+    <header class="mobile-bar">
+      <button id="menu-btn" type="button" class="btn icon-btn" aria-label="打开导航">☰</button>
+      <div class="mobile-title">MailPush</div>
+      <button id="mobile-logout-btn" type="button" class="btn icon-btn" aria-label="退出登录">⎋</button>
+    </header>
+
+    <main class="content">
+      <section id="page-overview" class="page active" data-page="overview">
+        <div class="page-header">
+          <div>
+            <h2 class="page-title">📊 概览</h2>
+            <p class="page-desc">运行状态、账户连接、最近邮件与推送通道测试。</p>
+          </div>
+          <div class="actions">
+            <button id="overview-refresh-btn" type="button" class="btn btn-primary">刷新</button>
+            <button id="overview-test-all-btn" type="button" class="btn btn-gold">测试所有推送通道</button>
+          </div>
+        </div>
+
+        <div class="grid metric-grid">
+          <div class="panel metric">
+            <div class="metric-label">运行时间</div>
+            <div id="metric-uptime" class="metric-value">--</div>
+            <div class="metric-hint">服务启动后累计时间</div>
+          </div>
+          <div class="panel metric">
+            <div class="metric-label">账户连接</div>
+            <div id="metric-accounts" class="metric-value">--</div>
+            <div class="metric-hint">已连接 / 总计</div>
+          </div>
+          <div class="panel metric">
+            <div class="metric-label">邮件缓冲区</div>
+            <div id="metric-emails" class="metric-value">--</div>
+            <div class="metric-hint">内存中的最近邮件</div>
+          </div>
+          <div class="panel metric">
+            <div class="metric-label">推送通道</div>
+            <div id="metric-deliveries" class="metric-value">--</div>
+            <div class="metric-hint">当前已配置通道</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h3 class="panel-title">最近 10 封邮件</h3>
+            <span id="overview-last-refresh" class="text-muted small">--</span>
+          </div>
+          <div class="panel-body">
+            <div id="recent-email-list" class="email-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="page-emails" class="page" data-page="emails">
+        <div class="page-header">
+          <div>
+            <h2 class="page-title">📧 邮件</h2>
+            <p class="page-desc">查看 MailPush 当前缓冲区里的邮件记录。</p>
+          </div>
+          <div class="actions">
+            <button id="emails-refresh-btn" type="button" class="btn btn-primary">刷新</button>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <select id="email-account-filter" class="select" aria-label="按账户筛选">
+              <option value="">全部账户</option>
+            </select>
+          </div>
+          <div class="toolbar-right">
+            <span id="emails-count" class="text-muted small">0 封</span>
+          </div>
+        </div>
+
+        <div id="email-card-list" class="email-list"></div>
+      </section>
+
+      <section id="page-accounts" class="page" data-page="accounts">
+        <div class="page-header">
+          <div>
+            <h2 class="page-title">🔐 账户设置</h2>
+            <p class="page-desc">管理 IMAP 账户，并通过向导添加常用邮箱。</p>
+          </div>
+          <div class="actions">
+            <button id="reconnect-accounts-btn" type="button" class="btn btn-green">重连所有账户</button>
+            <button id="open-account-modal-btn" type="button" class="btn btn-primary">添加邮箱</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h3 class="panel-title">已配置邮箱</h3>
+            <span id="accounts-count" class="text-muted small">--</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>名称</th>
+                  <th>IMAP 服务器</th>
+                  <th>用户名</th>
+                  <th>连接状态</th>
+                  <th>最后活动时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="accounts-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="page-deliveries" class="page" data-page="deliveries">
+        <div class="page-header">
+          <div>
+            <h2 class="page-title">🚀 推送通道</h2>
+            <p class="page-desc">管理通知投递目标，并测试单个或全部通道。</p>
+          </div>
+          <div class="actions">
+            <button id="test-all-deliveries-btn" type="button" class="btn btn-gold">测试全部</button>
+            <button id="open-delivery-modal-btn" type="button" class="btn btn-primary">添加通道</button>
+          </div>
+        </div>
+
+        <div id="delivery-list" class="delivery-list"></div>
+      </section>
+
+      <section id="page-settings" class="page" data-page="settings">
+        <div class="page-header">
+          <div>
+            <h2 class="page-title">⚙️ 系统设置</h2>
+            <p class="page-desc">查看当前配置摘要。敏感字段会在 API 返回时隐藏。</p>
+          </div>
+          <div class="actions">
+            <button id="settings-refresh-btn" type="button" class="btn btn-primary">刷新配置</button>
+            <button id="restart-hint-btn" type="button" class="btn btn-gold">重启容器</button>
+          </div>
+        </div>
+
+        <div class="grid" style="grid-template-columns: minmax(0, 1fr);">
+          <div class="panel">
+            <div class="panel-head">
+              <h3 class="panel-title">配置摘要</h3>
+              <span class="text-muted small">已排除密码、token、secret 等敏感字段</span>
+            </div>
+            <div class="panel-body">
+              <pre id="config-summary" class="config-summary">{}</pre>
+            </div>
+          </div>
+          <div class="hint-box">
+            <div><strong>配置文件路径</strong></div>
+            <div><code>/home/fd0609/mailpush-docker-config/config.json</code></div>
+            <div class="small">容器内路径：<code>/home/mailpush/.config/mailpush/config.json</code></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div id="account-modal" class="modal" aria-hidden="true">
+  <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="account-modal-title">
+    <div class="modal-head">
+      <h3 id="account-modal-title" class="modal-title">添加邮箱</h3>
+      <button type="button" class="btn icon-btn" data-close-modal="account-modal" aria-label="关闭">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="steps" aria-hidden="true">
+        <div id="account-step-1" class="step active"></div>
+        <div id="account-step-2" class="step"></div>
+      </div>
+      <div id="account-provider-step">
+        <div class="provider-grid">
+          <button type="button" class="provider-card" data-provider="qq">
+            <span class="provider-icon">💬</span>
+            <strong>QQ邮箱</strong>
+            <div class="text-muted small">imap.qq.com / SSL 993</div>
+          </button>
+          <button type="button" class="provider-card" data-provider="gmail">
+            <span class="provider-icon">G</span>
+            <strong>Gmail / Google</strong>
+            <div class="text-muted small">imap.gmail.com / SSL 993</div>
+          </button>
+          <button type="button" class="provider-card" data-provider="custom">
+            <span class="provider-icon">✳</span>
+            <strong>其他</strong>
+            <div class="text-muted small">自定义 IMAP 参数</div>
+          </button>
+        </div>
+      </div>
+
+      <form id="account-form" class="hidden" autocomplete="off">
+        <div id="provider-qq" class="provider-panel hidden">
+          <div class="hint-box" style="margin-bottom: 16px;">💡 授权码获取：登录QQ邮箱 → 设置 → 账户 → 生成授权码</div>
+          <div class="form-grid">
+            <div class="field span-2">
+              <label for="qq-email">邮箱地址</label>
+              <input id="qq-email" class="control" type="email" placeholder="name@qq.com">
+            </div>
+            <div class="field span-2">
+              <label for="qq-password">授权码</label>
+              <input id="qq-password" class="control" type="password" placeholder="QQ 邮箱授权码">
+            </div>
+          </div>
+        </div>
+
+        <div id="provider-gmail" class="provider-panel hidden">
+          <div class="hint-box" style="margin-bottom: 16px;">💡 应用密码获取：Google账号 → 安全 → 两步验证 → 应用密码</div>
+          <div class="form-grid">
+            <div class="field span-2">
+              <label for="gmail-email">邮箱地址</label>
+              <input id="gmail-email" class="control" type="email" placeholder="name@gmail.com">
+            </div>
+            <div class="field span-2">
+              <label for="gmail-password">App Password</label>
+              <input id="gmail-password" class="control" type="password" placeholder="Google 应用密码">
+            </div>
+          </div>
+        </div>
+
+        <div id="provider-custom" class="provider-panel hidden">
+          <div class="form-grid">
+            <div class="field">
+              <label for="custom-name">名称</label>
+              <input id="custom-name" class="control" type="text" placeholder="工作邮箱">
+            </div>
+            <div class="field">
+              <label for="custom-host">IMAP 服务器</label>
+              <input id="custom-host" class="control" type="text" placeholder="imap.example.com">
+            </div>
+            <div class="field">
+              <label for="custom-port">端口</label>
+              <input id="custom-port" class="control" type="number" value="993" min="1" max="65535">
+            </div>
+            <div class="field">
+              <label for="custom-username">用户名</label>
+              <input id="custom-username" class="control" type="text" placeholder="name@example.com">
+            </div>
+            <div class="field span-2">
+              <label for="custom-password">密码 / 授权码</label>
+              <input id="custom-password" class="control" type="password" placeholder="IMAP 密码或授权码">
+            </div>
+            <label class="check-row span-2">
+              <input id="custom-ssl" type="checkbox" checked>
+              <span>启用 SSL</span>
+            </label>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button id="account-back-btn" type="button" class="btn hidden">上一步</button>
+      <div class="actions">
+        <button type="button" class="btn" data-close-modal="account-modal">取消</button>
+        <button id="account-submit-btn" type="button" class="btn btn-primary hidden">保存邮箱</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div id="delivery-modal" class="modal" aria-hidden="true">
+  <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="delivery-modal-title">
+    <div class="modal-head">
+      <h3 id="delivery-modal-title" class="modal-title">添加推送通道</h3>
+      <button type="button" class="btn icon-btn" data-close-modal="delivery-modal" aria-label="关闭">×</button>
+    </div>
+    <form id="delivery-form" autocomplete="off">
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="field">
+            <label for="delivery-name">名称</label>
+            <input id="delivery-name" class="control" type="text" placeholder="telegram-1">
+          </div>
+          <div class="field">
+            <label for="delivery-type">类型</label>
+            <select id="delivery-type" class="select">
+              <option value="hermes">hermes</option>
+              <option value="http">http</option>
+              <option value="webhook">webhook</option>
+              <option value="command">command</option>
+            </select>
+          </div>
+          <div class="field span-2">
+            <label for="delivery-config">配置 JSON</label>
+            <textarea id="delivery-config" class="textarea" spellcheck="false"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <span class="text-muted small">保存后立即写入配置文件</span>
+        <div class="actions">
+          <button type="button" class="btn" data-close-modal="delivery-modal">取消</button>
+          <button type="submit" class="btn btn-primary">保存通道</button>
+        </div>
+      </div>
+    </form>
+  </section>
+</div>
+
+<div id="toast-stack" class="toast-stack" aria-live="polite" aria-atomic="true"></div>
+
+<script>
+const TOKEN_KEY = "mailpush.apiToken";
+const REFRESH_INTERVAL_MS = 30000;
+const CONFIG_PATH = "/home/fd0609/mailpush-docker-config/config.json";
+
+let apiToken = localStorage.getItem(TOKEN_KEY) || "";
+let activeView = "overview";
+let overviewTimer = null;
+let selectedProvider = "";
+let cache = {
+  state: null,
+  accounts: [],
+  deliveries: [],
+  emails: [],
+  config: null
+};
+
+const $ = (selector, root = document) => root.querySelector(selector);
+const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+
+document.addEventListener("DOMContentLoaded", () => {
+  bindEvents();
+  boot();
+});
+
+function bindEvents() {
+  $("#login-form").addEventListener("submit", handleLogin);
+  $("#logout-btn").addEventListener("click", logout);
+  $("#mobile-logout-btn").addEventListener("click", logout);
+  $("#menu-btn").addEventListener("click", () => document.body.classList.add("nav-open"));
+  $("#nav-backdrop").addEventListener("click", closeMobileNav);
+
+  $$(".nav-button").forEach((button) => {
+    button.addEventListener("click", () => switchView(button.dataset.view));
+  });
+
+  $("#overview-refresh-btn").addEventListener("click", () => refreshOverview());
+  $("#overview-test-all-btn").addEventListener("click", () => testAllDeliveries());
+  $("#emails-refresh-btn").addEventListener("click", () => refreshEmails());
+  $("#email-account-filter").addEventListener("change", () => refreshEmails());
+  $("#open-account-modal-btn").addEventListener("click", openAccountModal);
+  $("#account-back-btn").addEventListener("click", goProviderStep);
+  $("#account-submit-btn").addEventListener("click", submitAccount);
+  $("#reconnect-accounts-btn").addEventListener("click", reconnectAccounts);
+  $("#test-all-deliveries-btn").addEventListener("click", () => testAllDeliveries());
+  $("#open-delivery-modal-btn").addEventListener("click", openDeliveryModal);
+  $("#delivery-form").addEventListener("submit", submitDelivery);
+  $("#delivery-type").addEventListener("change", updateDeliveryTemplate);
+  $("#settings-refresh-btn").addEventListener("click", () => refreshSettings());
+  $("#restart-hint-btn").addEventListener("click", showRestartHint);
+
+  $("[data-provider='qq']").addEventListener("click", () => chooseProvider("qq"));
+  $("[data-provider='gmail']").addEventListener("click", () => chooseProvider("gmail"));
+  $("[data-provider='custom']").addEventListener("click", () => chooseProvider("custom"));
+
+  $$("[data-close-modal]").forEach((button) => {
+    button.addEventListener("click", () => closeModal(button.dataset.closeModal));
+  });
+
+  $$(".modal").forEach((modal) => {
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) closeModal(modal.id);
+    });
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeMobileNav();
+      $$(".modal.open").forEach((modal) => closeModal(modal.id));
+    }
+  });
+}
+
+async function boot() {
+  if (!apiToken) {
+    showLogin();
+    return;
+  }
+
+  setLoginMessage("正在验证会话...");
+  try {
+    await apiFetch("/api/state", { skipUnauthorized: true });
+    showApp();
+    await refreshOverview();
+  } catch (error) {
+    if (error.status === 401) {
+      forceLogin("会话已失效，请重新登录");
+      return;
+    }
+    showLogin();
+    setLoginMessage(error.message || "无法连接 MailPush API");
+  }
+}
+
+async function handleLogin(event) {
+  event.preventDefault();
+  const token = $("#token-input").value.trim();
+  if (!token) {
+    setLoginMessage("请输入 API Token");
+    return;
+  }
+
+  const submit = $("#login-submit");
+  submit.disabled = true;
+  setLoginMessage("");
+  try {
+    const result = await apiFetch("/api/auth", {
+      method: "POST",
+      auth: false,
+      body: { token }
+    });
+
+    if (!result.ok) {
+      setLoginMessage("API Token 不正确");
+      return;
+    }
+
+    apiToken = token;
+    localStorage.setItem(TOKEN_KEY, token);
+    showApp();
+    await refreshOverview();
+  } catch (error) {
+    setLoginMessage(error.message || "登录失败");
+  } finally {
+    submit.disabled = false;
+  }
+}
+
+function showLogin() {
+  $("#login-view").classList.remove("hidden");
+  $("#app-shell").classList.add("hidden");
+  stopOverviewTimer();
+  setSession(false, "未登录");
+  setTimeout(() => $("#token-input").focus(), 0);
+}
+
+function showApp() {
+  $("#login-view").classList.add("hidden");
+  $("#app-shell").classList.remove("hidden");
+  setSession(true, "已连接");
+  setLoginMessage("");
+  startOverviewTimer();
+}
+
+function logout() {
+  localStorage.removeItem(TOKEN_KEY);
+  apiToken = "";
+  location.reload();
+}
+
+function forceLogin(message) {
+  localStorage.removeItem(TOKEN_KEY);
+  apiToken = "";
+  showLogin();
+  setLoginMessage(message || "请重新登录");
+}
+
+function setLoginMessage(message) {
+  $("#login-error").textContent = message || "";
+}
+
+function setSession(ok, text) {
+  $("#session-dot").className = "dot " + (ok ? "ok" : "bad");
+  $("#session-text").textContent = text;
+}
+
+function startOverviewTimer() {
+  stopOverviewTimer();
+  overviewTimer = setInterval(() => {
+    if (activeView === "overview" && !$("#app-shell").classList.contains("hidden")) {
+      refreshOverview({ silent: true });
+    }
+  }, REFRESH_INTERVAL_MS);
+}
+
+function stopOverviewTimer() {
+  if (overviewTimer) {
+    clearInterval(overviewTimer);
+    overviewTimer = null;
+  }
+}
+
+async function apiFetch(path, options = {}) {
+  const {
+    auth = true,
+    body,
+    headers = {},
+    skipUnauthorized = false,
+    ...fetchOptions
+  } = options;
+
+  const requestHeaders = {
+    Accept: "application/json",
+    ...headers
+  };
+
+  if (auth && apiToken) {
+    requestHeaders["X-API-Token"] = apiToken;
+  }
+
+  if (body !== undefined) {
+    requestHeaders["Content-Type"] = "application/json";
+    fetchOptions.body = JSON.stringify(body);
+  }
+
+  let response;
+  try {
+    response = await fetch(path, {
+      ...fetchOptions,
+      headers: requestHeaders
+    });
+  } catch (error) {
+    throw new Error("无法连接服务器");
+  }
+
+  if (response.status === 401) {
+    const error = new Error("认证已失效");
+    error.status = 401;
+    if (!skipUnauthorized) forceLogin("会话已失效，请重新登录");
+    throw error;
+  }
+
+  const text = await response.text();
+  let data = {};
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch (error) {
+      data = { message: text };
+    }
+  }
+
+  if (!response.ok) {
+    const detail = data.detail || data.error || data.message || `请求失败 (${response.status})`;
+    const error = new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+    error.status = response.status;
+    throw error;
+  }
+
+  return data;
+}
+
+function switchView(view) {
+  activeView = view;
+  $$(".nav-button").forEach((button) => {
+    button.classList.toggle("active", button.dataset.view === view);
+  });
+  $$(".page").forEach((page) => {
+    page.classList.toggle("active", page.dataset.page === view);
+  });
+  closeMobileNav();
+  loadView(view);
+}
+
+function closeMobileNav() {
+  document.body.classList.remove("nav-open");
+}
+
+async function loadView(view) {
+  try {
+    if (view === "overview") await refreshOverview();
+    if (view === "emails") await refreshEmails();
+    if (view === "accounts") await refreshAccounts();
+    if (view === "deliveries") await refreshDeliveries();
+    if (view === "settings") await refreshSettings();
+  } catch (error) {
+    toast(error.message || "加载失败", "error");
+  }
+}
+
+async function refreshOverview(options = {}) {
+  const [stateData, emailsData, accountsData] = await Promise.all([
+    apiFetch("/api/state"),
+    apiFetch("/api/emails?limit=10"),
+    apiFetch("/api/accounts")
+  ]);
+
+  cache.state = stateData;
+  cache.emails = emailsData.emails || [];
+  cache.accounts = accountsData.accounts || [];
+  cache.deliveries = stateData.deliveries || [];
+
+  renderMetrics(stateData, cache.accounts);
+  renderRecentEmails(cache.emails);
+  populateAccountFilter(cache.accounts);
+  $("#overview-last-refresh").textContent = `更新于 ${formatTime(new Date())}`;
+  setSession(true, "已连接");
+  if (!options.silent) toast("概览已刷新", "ok");
+}
+
+function renderMetrics(stateData, accounts) {
+  const status = stateData.status || {};
+  const connected = Number(status.accounts_connected || accounts.filter((item) => item.connected).length || 0);
+  const total = Number(status.accounts_total || accounts.length || 0);
+  const recentCount = Number(stateData.recent_emails || 0);
+  const deliveriesCount = (stateData.deliveries || []).length;
+
+  $("#metric-uptime").textContent = formatUptime(status.uptime_seconds);
+  $("#metric-accounts").textContent = `${connected}/${total}`;
+  $("#metric-emails").textContent = String(recentCount);
+  $("#metric-deliveries").textContent = String(deliveriesCount);
+}
+
+function renderRecentEmails(emails) {
+  const container = $("#recent-email-list");
+  if (!emails.length) {
+    container.innerHTML = `<div class="empty">暂无邮件记录</div>`;
+    return;
+  }
+  container.innerHTML = emails.map(renderEmailCard).join("");
+}
+
+async function refreshEmails() {
+  if (!cache.accounts.length) {
+    await refreshAccounts({ renderOnly: true });
+  }
+
+  const account = $("#email-account-filter").value;
+  const params = new URLSearchParams({ limit: "50" });
+  if (account) params.set("account", account);
+  const data = await apiFetch(`/api/emails?${params.toString()}`);
+  cache.emails = data.emails || [];
+  $("#emails-count").textContent = `${data.total ?? cache.emails.length} 封`;
+  renderEmails(cache.emails);
+}
+
+function renderEmails(emails) {
+  const container = $("#email-card-list");
+  if (!emails.length) {
+    container.innerHTML = `<div class="panel empty">暂无邮件记录</div>`;
+    return;
+  }
+  container.innerHTML = emails.map(renderEmailCard).join("");
+}
+
+function renderEmailCard(email) {
+  const account = escapeHtml(email.account || "--");
+  const sender = escapeHtml(email.sender || "--");
+  const subject = escapeHtml(email.subject_cn || email.subject || "(无主题)");
+  const rawPreview = email.body_preview || email.body_full || "";
+  const preview = escapeHtml(truncate(cleanText(rawPreview), 100));
+  const timestamp = escapeHtml(formatDate(email.timestamp || email.date || email.created_at));
+
+  return `
+    <article class="email-card">
+      <div class="email-top">
+        <div>
+          <div class="email-meta">
+            <span class="tag">${account}</span>
+            <span>${sender}</span>
+          </div>
+          <div class="email-title">${subject}</div>
+        </div>
+        <div class="text-muted small">${timestamp}</div>
+      </div>
+      <p class="email-preview">${preview || "无正文预览"}</p>
+    </article>
+  `;
+}
+
+async function refreshAccounts(options = {}) {
+  const data = await apiFetch("/api/accounts");
+  cache.accounts = data.accounts || [];
+  populateAccountFilter(cache.accounts);
+  if (!options.renderOnly) renderAccounts(cache.accounts);
+}
+
+function renderAccounts(accounts) {
+  $("#accounts-count").textContent = `${accounts.length} 个账户`;
+  const body = $("#accounts-table");
+  if (!accounts.length) {
+    body.innerHTML = `<tr><td colspan="6" class="empty">暂无账户</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = accounts.map((account) => {
+    const name = escapeHtml(account.name || "--");
+    const host = escapeHtml(`${account.host || "--"}:${account.port || 993}`);
+    const username = escapeHtml(account.username || "--");
+    const connected = Boolean(account.connected);
+    const status = connected
+      ? `<span class="status-pill ok">🟢 已连接</span>`
+      : `<span class="status-pill bad">🔴 未连接</span>`;
+    const last = escapeHtml(formatDate(account.last_event));
+    const error = account.error ? `<div class="text-muted small">${escapeHtml(account.error)}</div>` : "";
+    return `
+      <tr>
+        <td><strong>${name}</strong></td>
+        <td>${host}</td>
+        <td>${username}</td>
+        <td>${status}${error}</td>
+        <td>${last}</td>
+        <td><button type="button" class="btn btn-danger" data-delete-account="${encodeAttr(account.name || "")}">删除</button></td>
+      </tr>
+    `;
+  }).join("");
+
+  $$("[data-delete-account]", body).forEach((button) => {
+    button.addEventListener("click", () => deleteAccount(button.dataset.deleteAccount));
+  });
+}
+
+function populateAccountFilter(accounts) {
+  const select = $("#email-account-filter");
+  const previous = select.value;
+  select.innerHTML = `<option value="">全部账户</option>` + accounts.map((account) => {
+    const name = account.name || account.username || "";
+    return `<option value="${encodeAttr(name)}">${escapeHtml(name)}</option>`;
+  }).join("");
+  if (accounts.some((account) => (account.name || account.username || "") === previous)) {
+    select.value = previous;
+  }
+}
+
+function openAccountModal() {
+  selectedProvider = "";
+  $("#account-form").reset();
+  goProviderStep();
+  openModal("account-modal");
+}
+
+function chooseProvider(provider) {
+  selectedProvider = provider;
+  $$(".provider-card").forEach((card) => {
+    card.classList.toggle("active", card.dataset.provider === provider);
+  });
+  $("#account-provider-step").classList.add("hidden");
+  $("#account-form").classList.remove("hidden");
+  $("#account-back-btn").classList.remove("hidden");
+  $("#account-submit-btn").classList.remove("hidden");
+  $("#account-step-1").classList.add("active");
+  $("#account-step-2").classList.add("active");
+  $$(".provider-panel").forEach((panel) => panel.classList.add("hidden"));
+  $(`#provider-${provider}`).classList.remove("hidden");
+}
+
+function goProviderStep() {
+  selectedProvider = "";
+  $("#account-provider-step").classList.remove("hidden");
+  $("#account-form").classList.add("hidden");
+  $("#account-back-btn").classList.add("hidden");
+  $("#account-submit-btn").classList.add("hidden");
+  $("#account-step-1").classList.add("active");
+  $("#account-step-2").classList.remove("active");
+  $$(".provider-card").forEach((card) => card.classList.remove("active"));
+  $$(".provider-panel").forEach((panel) => panel.classList.add("hidden"));
+}
+
+async function submitAccount() {
+  try {
+    const payload = buildAccountPayload();
+    const button = $("#account-submit-btn");
+    button.disabled = true;
+    await apiFetch("/api/accounts", {
+      method: "POST",
+      body: payload
+    });
+
+    try {
+      await apiFetch("/api/accounts/reconnect", { method: "POST" });
+      toast("邮箱已保存，账户正在重连", "ok");
+    } catch (error) {
+      toast(`邮箱已保存，重连失败：${error.message}`, "error");
+    }
+
+    closeModal("account-modal");
+    await refreshAccounts();
+    if (activeView === "overview") await refreshOverview({ silent: true });
+  } catch (error) {
+    toast(error.message || "保存邮箱失败", "error");
+  } finally {
+    $("#account-submit-btn").disabled = false;
+  }
+}
+
+function buildAccountPayload() {
+  if (selectedProvider === "qq") {
+    const email = $("#qq-email").value.trim();
+    const password = $("#qq-password").value.trim();
+    if (!email || !password) throw new Error("请填写 QQ 邮箱地址和授权码");
+    return {
+      name: email,
+      host: "imap.qq.com",
+      port: 993,
+      username: email,
+      password,
+      ssl: true,
+      enabled: true,
+      type: "imap"
+    };
+  }
+
+  if (selectedProvider === "gmail") {
+    const email = $("#gmail-email").value.trim();
+    const password = $("#gmail-password").value.trim();
+    if (!email || !password) throw new Error("请填写 Gmail 地址和 App Password");
+    return {
+      name: email,
+      host: "imap.gmail.com",
+      port: 993,
+      username: email,
+      password,
+      ssl: true,
+      enabled: true,
+      type: "imap"
+    };
+  }
+
+  if (selectedProvider === "custom") {
+    const name = $("#custom-name").value.trim();
+    const host = $("#custom-host").value.trim();
+    const port = Number($("#custom-port").value);
+    const username = $("#custom-username").value.trim();
+    const password = $("#custom-password").value.trim();
+    const ssl = $("#custom-ssl").checked;
+    if (!name || !host || !username || !password) throw new Error("请完整填写自定义邮箱参数");
+    if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("端口必须是 1-65535");
+    return { name, host, port, username, password, ssl, enabled: true, type: "imap" };
+  }
+
+  throw new Error("请选择邮箱类型");
+}
+
+async function deleteAccount(name) {
+  if (!name) return;
+  if (!confirm(`确定删除账户「${name}」吗？`)) return;
+  await apiFetch(`/api/accounts/${encodeURIComponent(name)}`, { method: "DELETE" });
+  toast("账户已删除", "ok");
+  await refreshAccounts();
+  if (activeView === "overview") await refreshOverview({ silent: true });
+}
+
+async function reconnectAccounts() {
+  const button = $("#reconnect-accounts-btn");
+  button.disabled = true;
+  try {
+    const result = await apiFetch("/api/accounts/reconnect", { method: "POST" });
+    toast(result.message || "账户正在重连", "ok");
+    await refreshAccounts();
+  } catch (error) {
+    toast(error.message || "重连失败", "error");
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function refreshDeliveries() {
+  const data = await apiFetch("/api/deliveries");
+  cache.deliveries = data.deliveries || [];
+  renderDeliveries(cache.deliveries);
+}
+
+function renderDeliveries(deliveries) {
+  const container = $("#delivery-list");
+  if (!deliveries.length) {
+    container.innerHTML = `<div class="panel empty">暂无推送通道</div>`;
+    return;
+  }
+
+  container.innerHTML = deliveries.map((delivery) => {
+    const name = escapeHtml(delivery.name || "--");
+    const type = escapeHtml(delivery.type || "--");
+    const summary = escapeHtml(configSummary(delivery.config || {}));
+    return `
+      <article class="delivery-card">
+        <div class="delivery-top">
+          <div>
+            <div class="delivery-meta">
+              <span class="tag">${type}</span>
+              <span>${summary}</span>
+            </div>
+            <div class="delivery-title">${name}</div>
+          </div>
+          <button type="button" class="btn btn-gold" data-test-delivery="${encodeAttr(delivery.name || "")}">测试</button>
+        </div>
+      </article>
+    `;
+  }).join("");
+
+  $$("[data-test-delivery]", container).forEach((button) => {
+    button.addEventListener("click", () => testDelivery(button.dataset.testDelivery, button));
+  });
+}
+
+function openDeliveryModal() {
+  $("#delivery-form").reset();
+  updateDeliveryTemplate();
+  openModal("delivery-modal");
+}
+
+function updateDeliveryTemplate() {
+  const type = $("#delivery-type").value;
+  const templates = {
+    hermes: {
+      mode: "api",
+      url: "http://host.docker.internal:18642/",
+      target: "weixin:your-id",
+      timeout: 15
+    },
+    http: {
+      url: "http://host.docker.internal:18642/",
+      method: "POST",
+      timeout: 10,
+      headers: {
+        "X-Mailpush-Target": "telegram:your-id"
+      }
+    },
+    webhook: {
+      url: "https://example.com/mailpush",
+      secret: "change-me",
+      timeout: 10
+    },
+    command: {
+      command: "/usr/local/bin/notify",
+      args: [],
+      timeout: 15
+    }
+  };
+  $("#delivery-config").value = JSON.stringify(templates[type], null, 2);
+}
+
+async function submitDelivery(event) {
+  event.preventDefault();
+  const name = $("#delivery-name").value.trim();
+  const type = $("#delivery-type").value;
+  let config;
+  if (!name) {
+    toast("请填写通道名称", "error");
+    return;
+  }
+  try {
+    config = JSON.parse($("#delivery-config").value || "{}");
+  } catch (error) {
+    toast("配置 JSON 格式不正确", "error");
+    return;
+  }
+
+  try {
+    await apiFetch("/api/deliveries", {
+      method: "POST",
+      body: { name, type, config }
+    });
+    closeModal("delivery-modal");
+    toast("推送通道已保存", "ok");
+    await refreshDeliveries();
+    if (activeView === "overview") await refreshOverview({ silent: true });
+  } catch (error) {
+    toast(error.message || "保存推送通道失败", "error");
+  }
+}
+
+async function testDelivery(name, button) {
+  if (!name) return;
+  if (button) button.disabled = true;
+  try {
+    const result = await apiFetch(`/api/deliveries/${encodeURIComponent(name)}/test`);
+    if (result.ok) {
+      toast(`通道「${name}」测试成功`, "ok");
+    } else {
+      toast(`通道「${name}」测试失败：${result.error || result.message || "未知错误"}`, "error");
+    }
+  } catch (error) {
+    toast(`通道「${name}」测试失败：${error.message}`, "error");
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function testAllDeliveries() {
+  if (!cache.deliveries.length) {
+    await refreshDeliveries();
+  }
+  if (!cache.deliveries.length) {
+    toast("暂无推送通道可测试", "error");
+    return;
+  }
+
+  const names = cache.deliveries.map((delivery) => delivery.name).filter(Boolean);
+  const results = await Promise.all(names.map(async (name) => {
+    try {
+      const result = await apiFetch(`/api/deliveries/${encodeURIComponent(name)}/test`);
+      return { name, ok: Boolean(result.ok), error: result.error || result.message || "" };
+    } catch (error) {
+      return { name, ok: false, error: error.message };
+    }
+  }));
+
+  const passed = results.filter((item) => item.ok).length;
+  const failed = results.length - passed;
+  if (failed) {
+    const firstError = results.find((item) => !item.ok);
+    toast(`测试完成：${passed} 成功，${failed} 失败。${firstError.name}: ${firstError.error || "未知错误"}`, "error");
+  } else {
+    toast(`测试完成：${passed} 个通道全部成功`, "ok");
+  }
+}
+
+async function refreshSettings() {
+  const data = await apiFetch("/api/config");
+  cache.config = data;
+  $("#config-summary").textContent = JSON.stringify(redact(data), null, 2);
+}
+
+function showRestartHint() {
+  alert(`请在项目目录执行：\n\ndocker compose -f /home/fd0609/nas-hermes/mailpush-v9/docker-compose.yml restart mailpush\n\n配置文件：${CONFIG_PATH}`);
+}
+
+function openModal(id) {
+  const modal = $(`#${id}`);
+  modal.classList.add("open");
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function closeModal(id) {
+  const modal = $(`#${id}`);
+  if (!modal) return;
+  modal.classList.remove("open");
+  modal.setAttribute("aria-hidden", "true");
+}
+
+function toast(message, type = "") {
+  const stack = $("#toast-stack");
+  const item = document.createElement("div");
+  item.className = `toast ${type}`;
+  item.textContent = message;
+  stack.appendChild(item);
+  setTimeout(() => {
+    item.style.opacity = "0";
+    item.style.transform = "translateY(8px)";
+    item.style.transition = "opacity 0.2s ease, transform 0.2s ease";
+    setTimeout(() => item.remove(), 220);
+  }, 3600);
+}
+
+function formatUptime(seconds) {
+  seconds = Math.max(0, Math.floor(Number(seconds) || 0));
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (days) return `${days}天 ${hours}小时`;
+  if (hours) return `${hours}小时 ${minutes}分`;
+  return `${minutes}分`;
+}
+
+function formatDate(value) {
+  if (!value) return "--";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  });
+}
+
+function formatTime(value) {
+  return value.toLocaleTimeString("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  });
+}
+
+function cleanText(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function truncate(value, max) {
+  const text = String(value || "");
+  return text.length > max ? `${text.slice(0, max)}...` : text;
+}
+
+function configSummary(config) {
+  const parts = [];
+  if (config.url) parts.push(config.url);
+  if (config.target) parts.push(`target=${config.target}`);
+  if (config.method) parts.push(config.method);
+  if (config.command) parts.push(config.command);
+  if (!parts.length) {
+    Object.keys(config).slice(0, 3).forEach((key) => parts.push(key));
+  }
+  return truncate(parts.join(" · ") || "无配置摘要", 90);
+}
+
+function redact(value) {
+  if (Array.isArray(value)) return value.map(redact);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(Object.entries(value).map(([key, child]) => {
+    const lowered = key.toLowerCase();
+    if (["password", "token", "secret", "api_key", "key", "authorization"].some((word) => lowered.includes(word))) {
+      return [key, "***"];
+    }
+    return [key, redact(child)];
+  }));
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function encodeAttr(value) {
+  return escapeHtml(value);
+}
+</script>
+</body>
+</html>

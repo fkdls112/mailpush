@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  mailpush:
+    build: .
+    container_name: mailpush
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount config directory so config.json persists across rebuilds
+      - /path/to/your/config:/home/mailpush/.config/mailpush
+      # - ./mailpush:/home/mailpush/mailpush  # Uncomment for hot-reload
+    environment:
+      - MAILPUSH_CONFIG=/home/mailpush/.config/mailpush/config.json
+      - TZ=Asia/Shanghai
+      - no_proxy=localhost,127.0.0.1,host.docker.internal,172.17.0.0/16,192.168.0.0/16,imap.qq.com,smtp.qq.com
+      - NO_PROXY=localhost,127.0.0.1,host.docker.internal,172.17.0.0/16,192.168.0.0/16,imap.qq.com,smtp.qq.com
+      - HTTP_PROXY=http://YOUR_PROXY_HOST:7890
+      - http_proxy=http://YOUR_PROXY_HOST:7890
+      - HTTPS_PROXY=http://YOUR_PROXY_HOST:7890
+      - https_proxy=http://YOUR_PROXY_HOST:7890
+      - ALL_PROXY=http://YOUR_PROXY_HOST:7890
+      - all_proxy=http://YOUR_PROXY_HOST:7890
+      # --- Secrets via env vars (optional, overrides config env: refs) ---
+      # - QQ_PASSWORD=
+      # - GMAIL_PASSWORD=
+      # - TELEGRAM_BOT_TOKEN=
+      # - DISCORD_WEBHOOK_URL=
+      # - OPENCKAW_TOKEN=
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-s", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

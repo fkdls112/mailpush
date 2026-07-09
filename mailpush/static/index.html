@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MailPush Dashboard</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>📬 MailPush</h1>
+    <div class="status-bar">
+      <span id="uptime">--</span>
+      <span id="acct-count">--</span>
+      <span id="conn-status" class="dot"></span>
+    </div>
+  </header>
+
+  <nav>
+    <button class="tab active" data-tab="overview">🏠 Overview</button>
+    <button class="tab" data-tab="emails">📧 Emails</button>
+    <button class="tab" data-tab="accounts">🔐 Accounts</button>
+    <button class="tab" data-tab="deliveries">🚀 Deliveries</button>
+    <button class="tab" data-tab="routes">🔀 Routes</button>
+    <button class="tab" data-tab="webhooks">🪝 Webhooks</button>
+    <button class="tab" data-tab="logs">📋 Logs</button>
+    <button class="tab" data-tab="config">⚙️ Config</button>
+  </nav>
+
+  <!-- OVERVIEW TAB -->
+  <section id="tab-overview" class="tab-content active">
+    <div class="overview-grid">
+      <div class="stat-card">
+        <div class="stat-label">Uptime</div>
+        <div class="stat-value" id="ov-uptime">--</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Accounts</div>
+        <div class="stat-value" id="ov-accounts">--</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Emails (buffer)</div>
+        <div class="stat-value" id="ov-emails">--</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Deliveries</div>
+        <div class="stat-value" id="ov-deliveries">--</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Webhooks</div>
+        <div class="stat-value" id="ov-webhooks">--</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Routes</div>
+        <div class="stat-value" id="ov-routes">--</div>
+      </div>
+    </div>
+    <div class="toolbar" style="margin-top:16px">
+      <button class="btn-primary" onclick="testAllDeliveries()">🧪 Test All Deliveries</button>
+      <button onclick="refreshOverview()">🔄 Refresh</button>
+    </div>
+    <div id="overview-delivery-result" class="result-box hidden"></div>
+    <h3 style="margin:16px 0 8px">Recent Emails</h3>
+    <div id="ov-email-list" class="card-list"></div>
+  </section>
+
+  <!-- EMAILS TAB -->
+  <section id="tab-emails" class="tab-content">
+    <div class="toolbar">
+      <select id="email-filter-acct">
+        <option value="">All Accounts</option>
+      </select>
+      <button onclick="refreshEmails()">🔄 Refresh</button>
+      <span id="email-count" class="badge">0</span>
+    </div>
+    <div id="email-list" class="card-list"></div>
+  </section>
+
+  <!-- ACCOUNTS TAB -->
+  <section id="tab-accounts" class="tab-content">
+    <div class="toolbar">
+      <button class="btn-primary" onclick="showAddAccount()">+ Add Account</button>
+    </div>
+    <div id="account-list" class="card-list"></div>
+    <div id="add-account-form" class="modal hidden">
+      <h3>Add Email Account</h3>
+      <input id="acct-name" placeholder="Account name (e.g. QQ, Gmail)">
+      <input id="acct-host" placeholder="IMAP host (e.g. imap.qq.com)">
+      <input id="acct-port" type="number" value="993" placeholder="Port">
+      <input id="acct-user" placeholder="Username">
+      <input id="acct-pass" type="password" placeholder="Password / App password">
+      <div class="btn-row">
+        <button class="btn-primary" onclick="addAccount()">Add</button>
+        <button onclick="hideAddAccount()">Cancel</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- DELIVERIES TAB -->
+  <section id="tab-deliveries" class="tab-content">
+    <div class="toolbar">
+      <button class="btn-primary" onclick="showAddDelivery()">+ Add Adapter</button>
+      <button onclick="testAllDeliveries()">🧪 Test All</button>
+    </div>
+    <div id="delivery-list" class="card-list"></div>
+    <div id="add-delivery-form" class="modal hidden">
+      <h3>Add Delivery Adapter</h3>
+      <input id="dlv-name" placeholder="Unique name (e.g. hermes-main)">
+      <select id="dlv-type">
+        <option value="hermes">hermes</option>
+        <option value="http">http</option>
+        <option value="webhook">webhook</option>
+        <option value="command">command</option>
+        <option value="openclaw">openclaw</option>
+      </select>
+      <textarea id="dlv-config" rows="4" placeholder='Config JSON, e.g. {"target":"wechat"}'></textarea>
+      <div class="btn-row">
+        <button class="btn-primary" onclick="addDelivery()">Add</button>
+        <button onclick="hideAddDelivery()">Cancel</button>
+      </div>
+    </div>
+    <div id="delivery-test-result" class="result-box hidden"></div>
+  </section>
+
+  <!-- ROUTES TAB -->
+  <section id="tab-routes" class="tab-content">
+    <div class="toolbar">
+      <button class="btn-primary" onclick="showAddRoute()">+ Add Route Rule</button>
+    </div>
+    <div id="route-list" class="card-list"></div>
+    <div id="add-route-form" class="modal hidden">
+      <h3>Add Route Rule</h3>
+      <input id="rt-name" placeholder="Rule name (optional)">
+      <input id="rt-account" placeholder='Match accounts (comma-sep, e.g. QQ,Gmail)'>
+      <input id="rt-sender" placeholder="sender_contains (optional)">
+      <input id="rt-subject" placeholder="subject_contains keyword (optional)">
+      <input id="rt-adapters" placeholder="Adapter names (comma-sep, e.g. hermes-main)">
+      <div class="btn-row">
+        <button class="btn-primary" onclick="addRoute()">Add</button>
+        <button onclick="hideAddRoute()">Cancel</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- WEBHOOKS TAB -->
+  <section id="tab-webhooks" class="tab-content">
+    <div class="toolbar">
+      <button class="btn-primary" onclick="showAddWebhook()">+ Add Webhook</button>
+    </div>
+    <div id="webhook-list" class="card-list"></div>
+    <div id="add-webhook-form" class="modal hidden">
+      <h3>Register Webhook</h3>
+      <input id="wh-url" placeholder="https://your-agent.com/webhook">
+      <input id="wh-secret" placeholder="HMAC secret (optional)">
+      <div class="btn-row">
+        <button class="btn-primary" onclick="addWebhook()">Register</button>
+        <button onclick="hideAddWebhook()">Cancel</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOGS TAB -->
+  <section id="tab-logs" class="tab-content">
+    <div class="toolbar">
+      <button onclick="refreshLogs()">🔄 Refresh</button>
+      <button onclick="clearLogs()">🗑 Clear</button>
+      <span class="badge" id="log-count">0</span>
+    </div>
+    <div id="log-list" class="log-panel"></div>
+  </section>
+
+  <!-- CONFIG TAB -->
+  <section id="tab-config" class="tab-content">
+    <div id="config-form">
+      <label><input type="checkbox" id="cfg-translate"> Translate subjects</label>
+      <label><input type="checkbox" id="cfg-summary"> Extract summaries</label>
+      <label><input type="checkbox" id="cfg-attachments"> Show attachments</label>
+      <label><input type="checkbox" id="cfg-merge"> Merge batch</label>
+      <label>Merge interval: <input type="number" id="cfg-merge-interval" min="5" max="300" value="30"> sec</label>
+      <button class="btn-primary" onclick="saveConfig()">Save</button>
+    </div>
+  </section>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "api_token": "change-me-to-a-random-string",
+    "public_url": ""
+  },
+  "accounts": [
+    {
+      "name": "QQ",
+      "enabled": true,
+      "type": "imap",
+      "host": "imap.qq.com",
+      "port": 993,
+      "username": "your-email@qq.com",
+      "password": "env:QQ_PASSWORD",
+      "smtp": {
+        "enabled": true,
+        "host": "smtp.qq.com",
+        "port": 587,
+        "username": "your-email@qq.com",
+        "password": "env:QQ_PASSWORD"
+      }
+    },
+    {
+      "name": "Gmail",
+      "enabled": false,
+      "type": "imap",
+      "host": "imap.gmail.com",
+      "port": 993,
+      "username": "your-email@gmail.com",
+      "password": "env:GMAIL_PASSWORD"
+    }
+  ],
+  "processing": {
+    "summary": true,
+    "translate": false,
+    "attachment_info": true,
+    "body_max_chars": 4000,
+    "merge_batch": false,
+    "merge_interval": 30
+  },
+  "filters": {
+    "allow_senders": [],
+    "block_senders": [],
+    "allow_keywords": [],
+    "block_keywords": [],
+    "account_rules": {}
+  },
+  "routes": [
+    {
+      "name": "important-to-telegram",
+      "enabled": true,
+      "match": {
+        "accounts": ["QQ"],
+        "keywords": ["验证码", "登录", "账单", "异常"],
+        "min_priority": "normal"
+      },
+      "deliveries": ["telegram-main"]
+    }
+  ],
+  "deliveries": {
+    "telegram-main": {
+      "type": "telegram",
+      "bot_token": "env:TELEGRAM_BOT_TOKEN",
+      "chat_id": "your-chat-id"
+    },
+    "hermes-main": {
+      "type": "hermes",
+      "mode": "cli",
+      "command": "hermes",
+      "target": "telegram:5941885113",
+      "template": "email_brief"
+    },
+    "generic-webhook": {
+      "type": "webhook",
+      "url": "https://example.com/mail",
+      "secret": "env:WEBHOOK_SECRET"
+    }
+  },
+  "delivery_targets": [],
+  "smtp_reply_from": "",
+  "api_token": "change-me-to-a-random-string",
+  "ai_summary": false
+}
