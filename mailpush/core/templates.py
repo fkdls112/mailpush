@@ -6,6 +6,45 @@ full dispatcher.
 """
 from __future__ import annotations
 
+import re
+
+# ── Auto code-wrap for copyable content ───────────────
+
+# Patterns that should be wrapped in <code> for Telegram tap-to-copy
+# Ordered from most specific to least — earlier matches take priority
+_RE_CODE_PATTERNS = [
+    # URL (http/https) — wrap before other patterns to avoid fragment matching
+    (re.compile(r'(https?://[^\s<>\[\]()]+)'), r'<code>\1</code>'),
+    # Verification code: preceded by keywords, avoid double-wrapping
+    (re.compile(r'(验证码|code|CODE|验证|verification)\s*[：:]\s*([A-Za-z0-9]{4,8})'), r'\1: <code>\2</code>'),
+    # Amounts with currency
+    (re.compile(r'(¥|￥|\$|€)\s*([\d,]+\.?\d*)'), r'<code>\1\2</code>'),
+    # IPv4 address
+    (re.compile(r'\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b'), r'<code>\1</code>'),
+    # License plate (Chinese, with optional dash)
+    (re.compile(r'([京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤川青藏琼][A-Z]-?[A-Z0-9]{5})'), r'<code>\1</code>'),
+    # Ticket/order numbers (common prefix + 6+ chars)
+    (re.compile(r'((?:SF|JD|YT|EMS|订单号|工单|ticket|order)\s*[：:]?\s*[A-Za-z0-9-]{6,})'), r'<code>\1</code>'),
+    # Standalone 6-char codes (last — avoid wrapping already-wrapped or preceded by keyword)
+    (re.compile(r'(?<!code>)(?<![A-Za-z0-9])([A-Z0-9]{6})(?![A-Za-z0-9])'), r'<code>\1</code>'),
+]
+
+
+def auto_code_wrap(text: str) -> str:
+    """Wrap detected copyable content in <code> tags for Telegram tap-to-copy.
+
+    Detects: IPs, URLs, verification codes, amounts, license plates, order numbers.
+    Already-wrapped content (containing <code>) is not double-wrapped.
+    """
+    if '<code>' in text:
+        return text  # already processed
+    for pattern, replacement in _RE_CODE_PATTERNS:
+        text = pattern.sub(replacement, text)
+    return text
+
+
+# ── Event rendering ───────────────────────────────────
+
 
 def render_event(event) -> str:
     """Render a MailEvent into a human-readable delivery message.

@@ -15,8 +15,14 @@ services:
     environment:
       - MAILPUSH_CONFIG=/home/mailpush/.config/mailpush/config.json
       - TZ=Asia/Shanghai
-      - no_proxy=localhost,127.0.0.1,host.docker.internal,172.17.0.0/16,192.168.2.0/24
-      - NO_PROXY=localhost,127.0.0.1,host.docker.internal,172.17.0.0/16,192.168.2.0/24
+      - no_proxy=localhost,127.0.0.1,host.docker.internal,172.17.0.0/16,192.168.2.0/24,imap.qq.com,smtp.qq.com
+      - NO_PROXY=localhost,127.0.0.1,host.docker.internal,172.17.0.0/16,192.168.2.0/24,imap.qq.com,smtp.qq.com
+      - HTTP_PROXY=http://192.168.2.99:7890
+      - http_proxy=http://192.168.2.99:7890
+      - HTTPS_PROXY=http://192.168.2.99:7890
+      - https_proxy=http://192.168.2.99:7890
+      - ALL_PROXY=http://192.168.2.99:7890
+      - all_proxy=http://192.168.2.99:7890
       # --- Secrets via env vars (optional, overrides config env: refs) ---
       # - QQ_PASSWORD=
       # - GMAIL_PASSWORD=

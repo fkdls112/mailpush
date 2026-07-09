@@ -17,7 +17,7 @@ from .hermes import HermesAdapter
 from .http import HttpAdapter
 from .openclaw import OpenClawAdapter
 from .webhook import WebhookAdapter
-from mailpush.core.templates import render_event  # noqa: F401 — re-exported
+from mailpush.core.templates import render_event, auto_code_wrap  # noqa: F401 — re-exported
 
 log = logging.getLogger("mailpush.dispatcher")
 
@@ -189,6 +189,7 @@ async def dispatch_event(event, config: dict) -> list[dict]:
     Returns list of per-adapter result dicts.
     """
     rendered = render_event(event)
+    rendered = auto_code_wrap(rendered)
     adapters = _build_adapters(config)
     routes = config.get("routes", [])
     targets = _match_routes(event, routes, adapters)
@@ -220,6 +221,7 @@ async def dispatch_event(event, config: dict) -> list[dict]:
 
 async def dispatch_message(message: str, config: dict) -> list[dict]:
     """Send a plain message through all configured adapters (no routing)."""
+    message = auto_code_wrap(message)
     adapters = _build_adapters(config)
     if not adapters:
         log.warning("No delivery adapters configured")
