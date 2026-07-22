@@ -11,6 +11,8 @@ WORKDIR /home/mailpush
 # Install Python dependencies
 RUN pip install --no-cache-dir \
     aioimaplib>=1.0.0 \
+    httpx>=0.25.0 \
+    "python-socks>=2.0.0" \
     "fastapi>=0.100.0" \
     "uvicorn[standard]>=0.23.0" \
     "pydantic>=2.0.0" \

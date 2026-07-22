@@ -12,6 +12,7 @@ import aioimaplib
 
 from mailpush.mail import parser as processor
 from mailpush.mail.filter import should_filter
+from mailpush.mail.proxy_imap import ProxyIMAP4SSL
 from mailpush.mail import summarizer, translator
 from mailpush.core.events import EmailNotification, AccountStatus
 
@@ -22,6 +23,7 @@ log = logging.getLogger('mailpush.imap')
 _account_statuses: dict[str, AccountStatus] = {}
 _email_count_today: dict[str, int] = {}
 _state_file: Path = Path.home() / '.config' / 'mailpush' / 'state.json'
+_active_tasks: list = []  # running watcher/merge tasks, for reconnect
 
 
 def _load_state() -> dict:
@@ -89,6 +91,7 @@ async def connect_all(
             _watch_account(acct, state, cfg, on_email)
         )
         tasks.append(task)
+        _active_tasks.append(task)
         _account_statuses[acct['name']] = AccountStatus(
             name=acct['name'],
             connected=False,
@@ -98,11 +101,29 @@ async def connect_all(
     # Merge timer
     merge_tasks = []
     if proc.get('merge_batch', True):
-        merge_tasks.append(asyncio.create_task(
+        mt = asyncio.create_task(
             _merge_timer(proc.get('merge_interval', 30), on_email)
-        ))
+        )
+        merge_tasks.append(mt)
+        _active_tasks.append(mt)
 
-    await asyncio.gather(*tasks, *merge_tasks)
+    await asyncio.gather(*tasks, *merge_tasks, return_exceptions=True)
+
+
+async def disconnect_all() -> None:
+    """Cancel all running watcher/merge tasks so accounts can be reconnected."""
+    tasks = list(_active_tasks)
+    _active_tasks.clear()
+    for t in tasks:
+        if not t.done():
+            t.cancel()
+    for t in tasks:
+        try:
+            await t
+        except (asyncio.CancelledError, Exception):
+            pass
+    _account_statuses.clear()
+    log.info('disconnect_all: cancelled %d tasks', len(tasks))
 
 
 # ── Merge queue ──────────────────────────────────────
@@ -142,11 +163,16 @@ async def _watch_account(
     port = acct.get('port', 993)
     user = acct['username']
     pwd = acct['password']
+    proxy_cfg = acct.get('proxy')
     last_uid = state.get(name, 0)
+
+    if proxy_cfg and proxy_cfg.get('enabled') and proxy_cfg.get('host'):
+        log.info('%s: using %s proxy %s:%s', name,
+                 proxy_cfg.get('type', 'http'), proxy_cfg.get('host'), proxy_cfg.get('port'))
 
     while True:
         try:
-            imap = aioimaplib.IMAP4_SSL(host, port, timeout=15)
+            imap = ProxyIMAP4SSL(host, port, timeout=15, proxy=proxy_cfg)
             await asyncio.wait_for(imap.wait_hello_from_server(), 15)
             await asyncio.wait_for(imap.login(user, pwd), 15)
             await asyncio.wait_for(imap.select('INBOX'), 15)
@@ -305,8 +331,10 @@ async def _build_and_push(
             if cn and cn != subject:
                 subject_cn = cn
 
-        # Summary
-        summary_data = summarizer.extract(body) if summary_enabled else None
+        # Summary (rule-based + optional AI)
+        summary_data = await summarizer.extract(body, proc.get('ai_summary')) if summary_enabled else None
+        if not summary_data:
+            summary_data = summarizer.extract_sync('')
 
         # Build notification
         notification = EmailNotification(
@@ -351,9 +379,11 @@ async def _build_merged(
             cn = translator.translate(subject)
             if cn and cn != subject:
                 lines.append(f'   🌐 {cn}')
-        summary_data = summarizer.extract(body) if summary_enabled else None
-        if summary_data and (summary_data.ips or summary_data.amounts):
+        summary_data = await summarizer.extract(body, proc.get('ai_summary')) if summary_enabled else None
+        if summary_data and (summary_data.ips or summary_data.amounts or summary_data.ai_summary):
             parts = []
+            if summary_data.ai_summary:
+                parts.append(summary_data.ai_summary)
             if summary_data.ips:
                 parts.append('IP: ' + ' / '.join(summary_data.ips[:2]))
             if summary_data.amounts:

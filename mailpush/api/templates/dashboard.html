@@ -714,6 +714,23 @@ tbody tr:last-child td {
   color: var(--muted);
 }
 
+label.checkbox,
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--blue);
+}
+
 .toast-stack {
   position: fixed;
   right: 18px;
@@ -1017,6 +1034,62 @@ tbody tr:last-child td {
               <pre id="config-summary" class="config-summary">{}</pre>
             </div>
           </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <h3 class="panel-title">AI 摘要</h3>
+              <span class="text-muted small">OpenAI 兼容 API，自定义端点和 Key</span>
+            </div>
+            <div class="panel-body">
+              <div class="form-grid" style="margin-bottom: 16px;">
+                <div class="field span-2">
+                  <label class="checkbox">
+                    <input id="ai-summary-enabled" type="checkbox">
+                    <span>启用 AI 摘要</span>
+                  </label>
+                </div>
+                <div class="field">
+                  <label for="ai-summary-provider">Provider</label>
+                  <select id="ai-summary-provider" class="control">
+                    <option value="openai">OpenAI</option>
+                    <option value="kimi">Kimi</option>
+                    <option value="claude">Claude</option>
+                    <option value="deepseek">DeepSeek</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="ai-summary-model">Model</label>
+                  <input id="ai-summary-model" class="control" type="text" placeholder="gpt-4o-mini / deepseek-chat">
+                </div>
+                <div class="field span-2">
+                  <label for="ai-summary-base_url">Base URL（留空使用官方）</label>
+                  <input id="ai-summary-base_url" class="control" type="text" placeholder="https://api.openai.com/v1">
+                </div>
+                <div class="field span-2">
+                  <label for="ai-summary-api_key">API Key</label>
+                  <input id="ai-summary-api_key" class="control" type="password" placeholder="sk-...">
+                </div>
+                <div class="field">
+                  <label for="ai-summary-max_tokens">Max tokens</label>
+                  <input id="ai-summary-max_tokens" class="control" type="number" min="50" max="2000" value="200">
+                </div>
+                <div class="field span-2">
+                  <label for="ai-summary-prompt">Prompt（留空使用默认）</label>
+                  <textarea id="ai-summary-prompt" class="control" rows="3" placeholder="用 1-2 句话总结这封邮件的核心内容"></textarea>
+                </div>
+              </div>
+              <div class="actions" style="justify-content: flex-start; gap: 10px;">
+                <button id="ai-summary-save-btn" type="button" class="btn btn-primary">保存 AI 设置</button>
+                <button id="ai-summary-test-btn" type="button" class="btn btn-green">测试调用</button>
+                <span id="ai-summary-msg" class="text-muted small"></span>
+              </div>
+              <div class="hint-box" style="margin-top: 16px;">
+                <div>💡 规则提取（IP、金额、验证码）和 AI 摘要会同时生效；关闭后仅保留规则提取。</div>
+              </div>
+            </div>
+          </div>
+
           <div class="hint-box">
             <div><strong>配置文件路径</strong></div>
             <div><code>/home/fd0609/mailpush-docker-config/config.json</code></div>
@@ -1116,6 +1189,39 @@ tbody tr:last-child td {
             </label>
           </div>
         </div>
+
+        <div id="account-proxy-block" style="margin-top:20px; padding-top:16px; border-top:1px solid rgba(0,0,0,0.08);">
+          <label class="check-row span-2" style="margin-bottom:12px;">
+            <input id="acct-proxy-enabled" type="checkbox">
+            <span>为该邮箱单独使用代理（覆盖容器全局代理）</span>
+          </label>
+          <div class="hint-box" style="margin-bottom:12px;">💡 Gmail 等需翻墙的邮箱可单独走代理。支持 HTTP 与 SOCKS5。留空则使用容器默认网络。</div>
+          <div class="form-grid" id="acct-proxy-fields">
+            <div class="field">
+              <label for="acct-proxy-type">代理类型</label>
+              <select id="acct-proxy-type" class="select control">
+                <option value="http">HTTP</option>
+                <option value="socks5">SOCKS5</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="acct-proxy-host">代理地址</label>
+              <input id="acct-proxy-host" class="control" type="text" placeholder="192.168.2.99">
+            </div>
+            <div class="field">
+              <label for="acct-proxy-port">代理端口</label>
+              <input id="acct-proxy-port" class="control" type="number" placeholder="7890" min="1" max="65535">
+            </div>
+            <div class="field">
+              <label for="acct-proxy-username">用户名（可选）</label>
+              <input id="acct-proxy-username" class="control" type="text" placeholder="留空则无认证" autocomplete="off">
+            </div>
+            <div class="field span-2">
+              <label for="acct-proxy-password">密码（可选）</label>
+              <input id="acct-proxy-password" class="control" type="password" placeholder="留空则无认证" autocomplete="new-password">
+            </div>
+          </div>
+        </div>
       </form>
     </div>
     <div class="modal-foot">
@@ -1123,6 +1229,54 @@ tbody tr:last-child td {
       <div class="actions">
         <button type="button" class="btn" data-close-modal="account-modal">取消</button>
         <button id="account-submit-btn" type="button" class="btn btn-primary hidden">保存邮箱</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div id="proxy-modal" class="modal" aria-hidden="true">
+  <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="proxy-modal-title">
+    <div class="modal-head">
+      <h3 id="proxy-modal-title" class="modal-title">代理设置</h3>
+      <button type="button" class="btn icon-btn" data-close-modal="proxy-modal" aria-label="关闭">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="hint-box" style="margin-bottom:14px;">为 <strong id="proxy-modal-acct">--</strong> 单独设置代理。翻墙邮箱（Gmail 等）建议开启，国内邮箱可关闭直连。支持 HTTP 与 SOCKS5。</div>
+      <label class="check-row span-2" style="margin-bottom:14px;">
+        <input id="pm-enabled" type="checkbox">
+        <span>启用独立代理</span>
+      </label>
+      <div class="form-grid">
+        <div class="field">
+          <label for="pm-type">代理类型</label>
+          <select id="pm-type" class="select control">
+            <option value="http">HTTP</option>
+            <option value="socks5">SOCKS5</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="pm-host">代理地址</label>
+          <input id="pm-host" class="control" type="text" placeholder="192.168.2.99">
+        </div>
+        <div class="field">
+          <label for="pm-port">代理端口</label>
+          <input id="pm-port" class="control" type="number" placeholder="7890" min="1" max="65535">
+        </div>
+        <div class="field">
+          <label for="pm-username">用户名（可选）</label>
+          <input id="pm-username" class="control" type="text" placeholder="留空则无认证" autocomplete="off">
+        </div>
+        <div class="field span-2">
+          <label for="pm-password">密码（可选）</label>
+          <input id="pm-password" class="control" type="password" placeholder="留空保留原密码" autocomplete="new-password">
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span class="text-muted small">保存后账户自动重连</span>
+      <div class="actions">
+        <button type="button" class="btn" data-close-modal="proxy-modal">取消</button>
+        <button id="proxy-save-btn" type="button" class="btn btn-primary">保存并重连</button>
       </div>
     </div>
   </section>
@@ -1213,12 +1367,15 @@ function bindEvents() {
   $("#account-back-btn").addEventListener("click", goProviderStep);
   $("#account-submit-btn").addEventListener("click", submitAccount);
   $("#reconnect-accounts-btn").addEventListener("click", reconnectAccounts);
+  $("#proxy-save-btn").addEventListener("click", saveProxy);
   $("#test-all-deliveries-btn").addEventListener("click", () => testAllDeliveries());
   $("#open-delivery-modal-btn").addEventListener("click", openDeliveryModal);
   $("#delivery-form").addEventListener("submit", submitDelivery);
   $("#delivery-type").addEventListener("change", updateDeliveryTemplate);
   $("#settings-refresh-btn").addEventListener("click", () => refreshSettings());
   $("#restart-hint-btn").addEventListener("click", showRestartHint);
+  $("#ai-summary-save-btn").addEventListener("click", saveAiSummarySettings);
+  $("#ai-summary-test-btn").addEventListener("click", testAiSummarySettings);
 
   $("[data-provider='qq']").addEventListener("click", () => chooseProvider("qq"));
   $("[data-provider='gmail']").addEventListener("click", () => chooseProvider("gmail"));
@@ -1546,7 +1703,10 @@ function renderAccounts(accounts) {
 
   body.innerHTML = accounts.map((account) => {
     const name = escapeHtml(account.name || "--");
-    const host = escapeHtml(`${account.host || "--"}:${account.port || 993}`);
+    const proxy = account.proxy && account.proxy.enabled
+      ? ` <span class="tag" title="${escapeHtml((account.proxy.type||'http')+' '+(account.proxy.host||'')+':'+(account.proxy.port||''))}">🔀 ${escapeHtml((account.proxy.type||'http').toUpperCase())}</span>`
+      : "";
+    const host = escapeHtml(`${account.host || "--"}:${account.port || 993}`) + proxy;
     const username = escapeHtml(account.username || "--");
     const connected = Boolean(account.connected);
     const status = connected
@@ -1561,7 +1721,10 @@ function renderAccounts(accounts) {
         <td>${username}</td>
         <td>${status}${error}</td>
         <td>${last}</td>
-        <td><button type="button" class="btn btn-danger" data-delete-account="${encodeAttr(account.name || "")}">删除</button></td>
+        <td>
+          <button type="button" class="btn" data-proxy-account="${encodeAttr(account.name || "")}">代理</button>
+          <button type="button" class="btn btn-danger" data-delete-account="${encodeAttr(account.name || "")}">删除</button>
+        </td>
       </tr>
     `;
   }).join("");
@@ -1569,6 +1732,80 @@ function renderAccounts(accounts) {
   $$("[data-delete-account]", body).forEach((button) => {
     button.addEventListener("click", () => deleteAccount(button.dataset.deleteAccount));
   });
+  $$("[data-proxy-account]", body).forEach((button) => {
+    button.addEventListener("click", () => openProxyModal(button.dataset.proxyAccount));
+  });
+}
+
+let proxyEditAccount = null;
+
+function openProxyModal(name) {
+  const acct = (cache.accounts || []).find((a) => (a.name || "") === name);
+  if (!acct) { toast("找不到账户", "error"); return; }
+  proxyEditAccount = name;
+  const p = acct.proxy || { enabled: false };
+  $("#proxy-modal-acct").textContent = name;
+  $("#pm-enabled").checked = Boolean(p.enabled);
+  $("#pm-type").value = p.type || "http";
+  $("#pm-host").value = p.host || "";
+  $("#pm-port").value = p.port || "";
+  $("#pm-username").value = p.username || "";
+  $("#pm-password").value = "";
+  $("#pm-password").placeholder = p.enabled && p.password === "***" ? "留空保留原密码" : "留空则无认证";
+  openModal("proxy-modal");
+}
+
+async function saveProxy() {
+  const acct = (cache.accounts || []).find((a) => (a.name || "") === proxyEditAccount);
+  if (!acct) { toast("找不到账户", "error"); return; }
+  const button = $("#proxy-save-btn");
+  try {
+    const enabled = $("#pm-enabled").checked;
+    let proxy;
+    if (!enabled) {
+      proxy = { enabled: false };
+    } else {
+      const host = $("#pm-host").value.trim();
+      const port = Number($("#pm-port").value);
+      if (!host || !Number.isInteger(port) || port < 1 || port > 65535) {
+        throw new Error("请填写有效的代理地址和端口（1-65535）");
+      }
+      const pwd = $("#pm-password").value;
+      proxy = {
+        enabled: true,
+        type: $("#pm-type").value || "http",
+        host,
+        port,
+        username: $("#pm-username").value.trim(),
+        password: pwd === "" ? "***" : pwd
+      };
+    }
+    button.disabled = true;
+    const payload = {
+      name: acct.name,
+      host: acct.host,
+      port: acct.port || 993,
+      username: acct.username,
+      password: "***",
+      ssl: acct.ssl !== false,
+      enabled: true,
+      type: "imap",
+      proxy
+    };
+    await apiFetch("/api/accounts", { method: "POST", body: payload });
+    try {
+      await apiFetch("/api/accounts/reconnect", { method: "POST" });
+      toast("代理已保存，账户正在重连", "ok");
+    } catch (error) {
+      toast(`代理已保存，重连失败：${error.message}`, "error");
+    }
+    closeModal("proxy-modal");
+    await refreshAccounts();
+  } catch (error) {
+    toast(error.message || "保存代理失败", "error");
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function populateAccountFilter(accounts) {
@@ -1644,7 +1881,27 @@ async function submitAccount() {
   }
 }
 
+function collectProxyConfig() {
+  const enabled = $("#acct-proxy-enabled").checked;
+  const host = $("#acct-proxy-host").value.trim();
+  const port = Number($("#acct-proxy-port").value);
+  if (!enabled) return { enabled: false };
+  if (!host || !Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error("已启用代理，请填写有效的代理地址和端口（1-65535）");
+  }
+  return {
+    enabled: true,
+    type: $("#acct-proxy-type").value || "http",
+    host,
+    port,
+    username: $("#acct-proxy-username").value.trim(),
+    password: $("#acct-proxy-password").value
+  };
+}
+
 function buildAccountPayload() {
+  const proxy = collectProxyConfig();
+
   if (selectedProvider === "qq") {
     const email = $("#qq-email").value.trim();
     const password = $("#qq-password").value.trim();
@@ -1657,7 +1914,8 @@ function buildAccountPayload() {
       password,
       ssl: true,
       enabled: true,
-      type: "imap"
+      type: "imap",
+      proxy
     };
   }
 
@@ -1673,7 +1931,8 @@ function buildAccountPayload() {
       password,
       ssl: true,
       enabled: true,
-      type: "imap"
+      type: "imap",
+      proxy
     };
   }
 
@@ -1686,7 +1945,7 @@ function buildAccountPayload() {
     const ssl = $("#custom-ssl").checked;
     if (!name || !host || !username || !password) throw new Error("请完整填写自定义邮箱参数");
     if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("端口必须是 1-65535");
-    return { name, host, port, username, password, ssl, enabled: true, type: "imap" };
+    return { name, host, port, username, password, ssl, enabled: true, type: "imap", proxy };
   }
 
   throw new Error("请选择邮箱类型");
@@ -1870,10 +2129,95 @@ async function refreshSettings() {
   const data = await apiFetch("/api/config");
   cache.config = data;
   $("#config-summary").textContent = JSON.stringify(redact(data), null, 2);
+  renderAiSummarySettings(data);
+}
+
+function renderAiSummarySettings(config) {
+  const ai = config.ai_summary || {};
+  $("#ai-summary-enabled").checked = ai.enabled || false;
+  $("#ai-summary-provider").value = ai.provider || "openai";
+  $("#ai-summary-model").value = ai.model || "";
+  $("#ai-summary-base_url").value = ai.base_url || "";
+  $("#ai-summary-api_key").value = ai.api_key || "";
+  $("#ai-summary-max_tokens").value = ai.max_tokens || 200;
+  $("#ai-summary-prompt").value = ai.prompt || "";
+}
+
+function collectAiSummarySettings() {
+  return {
+    enabled: $("#ai-summary-enabled").checked,
+    provider: $("#ai-summary-provider").value,
+    model: $("#ai-summary-model").value.trim(),
+    base_url: $("#ai-summary-base_url").value.trim(),
+    api_key: $("#ai-summary-api_key").value.trim(),
+    max_tokens: parseInt($("#ai-summary-max_tokens").value, 10) || 200,
+    prompt: $("#ai-summary-prompt").value.trim(),
+  };
+}
+
+async function saveAiSummarySettings() {
+  const config = cache.config || (await apiFetch("/api/config"));
+  const body = {
+    ...config,
+    ai_summary: collectAiSummarySettings(),
+  };
+  const btn = $("#ai-summary-save-btn");
+  btn.disabled = true;
+  try {
+    const result = await apiFetch("/api/config", {
+      method: "PUT",
+      body,
+    });
+    if (result.error) {
+      throw new Error(result.error);
+    }
+    cache.config = body;
+    $("#config-summary").textContent = JSON.stringify(redact(body), null, 2);
+    $("#ai-summary-msg").textContent = "已保存";
+    toast("AI 摘要设置已保存", "ok");
+  } catch (error) {
+    $("#ai-summary-msg").textContent = error.message || "保存失败";
+    toast(error.message || "保存失败", "error");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function testAiSummarySettings() {
+  const ai = collectAiSummarySettings();
+  if (!ai.enabled) {
+    toast("请先启用 AI 摘要", "error");
+    return;
+  }
+  if (!ai.model) {
+    toast("请填写 model", "error");
+    return;
+  }
+  if (!ai.api_key) {
+    toast("请填写 API Key", "error");
+    return;
+  }
+  const btn = $("#ai-summary-test-btn");
+  btn.disabled = true;
+  $("#ai-summary-msg").textContent = "测试中...";
+  try {
+    const result = await apiFetch("/api/ai-summary/test", {
+      method: "POST",
+      body: ai,
+    });
+    if (result.error) throw new Error(result.error);
+    $("#ai-summary-msg").textContent = "测试通过：" + (result.summary || "ok").slice(0, 60);
+    toast("AI 摘要测试通过", "ok");
+  } catch (error) {
+    $("#ai-summary-msg").textContent = error.message || "测试失败";
+    toast(error.message || "测试失败", "error");
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function showRestartHint() {
-  alert(`请在项目目录执行：\n\ndocker compose -f /home/fd0609/nas-hermes/mailpush-v9/docker-compose.yml restart mailpush\n\n配置文件：${CONFIG_PATH}`);
+  alert(`请在项目目录执行：\\n\\ndocker compose -f /home/fd0609/nas-hermes/mailpush-v9/docker-compose.yml restart mailpush\\n\\n配置文件：${CONFIG_PATH}`);
 }
 
 function openModal(id) {

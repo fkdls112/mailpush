@@ -172,16 +172,36 @@
 
   <!-- CONFIG TAB -->
   <section id="tab-config" class="tab-content">
-    <div id="config-form">
+    <div id="config-form" class="card">
+      <h3 style="margin-bottom:12px">基础处理</h3>
       <label><input type="checkbox" id="cfg-translate"> Translate subjects</label>
       <label><input type="checkbox" id="cfg-summary"> Extract summaries</label>
       <label><input type="checkbox" id="cfg-attachments"> Show attachments</label>
       <label><input type="checkbox" id="cfg-merge"> Merge batch</label>
       <label>Merge interval: <input type="number" id="cfg-merge-interval" min="5" max="300" value="30"> sec</label>
+
+      <h3 style="margin:20px 0 12px">AI 摘要</h3>
+      <label><input type="checkbox" id="cfg-ai-enabled"> 启用 AI 摘要</label>
+      <label>Provider
+        <select id="cfg-ai-provider" class="control" style="width:160px;margin-left:8px">
+          <option value="openai">OpenAI</option>
+          <option value="kimi">Kimi</option>
+          <option value="claude">Claude</option>
+          <option value="deepseek">DeepSeek</option>
+          <option value="custom">Custom</option>
+        </select>
+      </label>
+      <label>Model <input type="text" id="cfg-ai-model" placeholder="如 gpt-4o-mini / deepseek-chat" class="control" style="width:320px"></label>
+      <label>Base URL <input type="text" id="cfg-ai-base_url" placeholder="留空使用官方端点，如 https://api.moonshot.cn/v1" class="control" style="width:420px"></label>
+      <label>API Key <input type="password" id="cfg-ai-api_key" placeholder="sk-..." class="control" style="width:420px"></label>
+      <label>Max tokens <input type="number" id="cfg-ai-max_tokens" min="50" max="2000" value="200" class="control" style="width:120px"></label>
+      <label>Prompt (自定义提示词，留空使用默认)
+        <textarea id="cfg-ai-prompt" rows="3" class="control" placeholder="默认：用 1-2 句话总结这封邮件的核心内容"></textarea>
+      </label>
       <button class="btn-primary" onclick="saveConfig()">Save</button>
     </div>
   </section>
-</div>
+
 
 <script src="/static/app.js"></script>
 </body>

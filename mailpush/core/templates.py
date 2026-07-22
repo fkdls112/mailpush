@@ -34,8 +34,11 @@ def auto_code_wrap(text: str) -> str:
     """Wrap detected copyable content in <code> tags for Telegram tap-to-copy.
 
     Detects: IPs, URLs, verification codes, amounts, license plates, order numbers.
-    Already-wrapped content (containing <code>) is not double-wrapped.
+    Strips raw HTML tags first to avoid false positives from email body HTML.
+    If the text already contains our <code> tags (from a previous pass), skip.
     """
+    # Strip HTML tags that weren't intended as Telegram formatting
+    text = re.sub(r'<[^>]+>', '', text)
     if '<code>' in text:
         return text  # already processed
     for pattern, replacement in _RE_CODE_PATTERNS:
@@ -72,12 +75,15 @@ def render_event(event) -> str:
         amounts = _get(s, 'amounts') if isinstance(s, dict) else getattr(s, 'amounts', None)
         urls = _get(s, 'urls') if isinstance(s, dict) else getattr(s, 'urls', None)
         codes = _get(s, 'codes') if isinstance(s, dict) else getattr(s, 'codes', None)
+        ai_summary = _get(s, 'ai_summary') if isinstance(s, dict) else getattr(s, 'ai_summary', None)
+        if ai_summary:
+            lines.append(f'  📝 {ai_summary}')
         if ips:
             lines.append(f"  📝 IP: {' / '.join(ips)}")
         if amounts:
             lines.append(f"  📝 {' / '.join(amounts)}")
         if urls:
-            lines.append(f"  🔗 {urls[0]}")
+            lines.append(f'  🔗 {urls[0]}')
         if codes:
             lines.append(f"  📝 验证码: {' / '.join(codes)}")
 

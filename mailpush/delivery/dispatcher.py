@@ -17,6 +17,8 @@ from .hermes import HermesAdapter
 from .http import HttpAdapter
 from .openclaw import OpenClawAdapter
 from .webhook import WebhookAdapter
+import re
+
 from mailpush.core.templates import render_event, auto_code_wrap  # noqa: F401 — re-exported
 
 log = logging.getLogger("mailpush.dispatcher")
@@ -189,7 +191,8 @@ async def dispatch_event(event, config: dict) -> list[dict]:
     Returns list of per-adapter result dicts.
     """
     rendered = render_event(event)
-    rendered = auto_code_wrap(rendered)
+    rendered_code = auto_code_wrap(rendered)   # with <code> — for Telegram etc.
+    rendered_plain = re.sub(r'</?code>', '', rendered_code)  # stripped — for WeChat
     adapters = _build_adapters(config)
     routes = config.get("routes", [])
     targets = _match_routes(event, routes, adapters)
@@ -206,7 +209,10 @@ async def dispatch_event(event, config: dict) -> list[dict]:
     results = []
     for adapter in targets:
         try:
-            result = await adapter.send(event, rendered)
+            # WeChat / Hermes-weixin — skip <code> tags (WeChat doesn't render them)
+            is_wechat = any(kw in adapter.name.lower() for kw in ("wechat", "weixin"))
+            payload = rendered_plain if is_wechat else rendered_code
+            result = await adapter.send(event, payload)
         except Exception as exc:
             log.error("Adapter '%s' crashed: %s", adapter.name, exc)
             result = {
@@ -221,7 +227,8 @@ async def dispatch_event(event, config: dict) -> list[dict]:
 
 async def dispatch_message(message: str, config: dict) -> list[dict]:
     """Send a plain message through all configured adapters (no routing)."""
-    message = auto_code_wrap(message)
+    rendered_code = auto_code_wrap(message)
+    rendered_plain = re.sub(r'</?code>', '', rendered_code)
     adapters = _build_adapters(config)
     if not adapters:
         log.warning("No delivery adapters configured")
@@ -230,7 +237,9 @@ async def dispatch_message(message: str, config: dict) -> list[dict]:
     results = []
     for adapter in adapters:
         try:
-            result = await adapter.send(None, message)
+            is_wechat = any(kw in adapter.name.lower() for kw in ("wechat", "weixin"))
+            payload = rendered_plain if is_wechat else rendered_code
+            result = await adapter.send(None, payload)
         except Exception as exc:
             log.error("Adapter '%s' crashed: %s", adapter.name, exc)
             result = {
@@ -272,7 +281,9 @@ async def test_config(name: str, config: dict, notification=None) -> dict:
     }
     rendered = auto_code_wrap(render_event(event))
     try:
-        return await adapter.send(event, rendered)
+        is_wechat = any(kw in name.lower() for kw in ("wechat", "weixin"))
+        payload = re.sub(r'</?code>', '', rendered) if is_wechat else rendered
+        return await adapter.send(event, payload)
     except Exception as exc:
         return {
             "ok": False,

@@ -25,6 +25,10 @@ class EmailAccount(BaseModel):
     smtp_password: Optional[str] = Field(None, description="SMTP password")
     # Structured SMTP sub-object (preferred)
     smtp: Optional[Dict[str, Any]] = Field(None, description="SMTP config sub-object")
+    # Per-account proxy (optional). Overrides container-level env proxy for this account only.
+    # Shape: {"enabled": bool, "type": "http"|"socks5", "host": str, "port": int,
+    #         "username": str|"", "password": str|""}
+    proxy: Optional[Dict[str, Any]] = Field(None, description="Per-account proxy config (http/socks5)")
 
 
 # ── Email ─────────────────────────────────────────────
@@ -34,6 +38,7 @@ class EmailSummary(BaseModel):
     amounts: List[str] = Field(default_factory=list)
     urls: List[str] = Field(default_factory=list)
     codes: List[str] = Field(default_factory=list)
+    ai_summary: Optional[str] = Field(None, description="AI-generated human-readable summary of the email")
 
 
 class Attachment(BaseModel):
@@ -119,6 +124,15 @@ class WebhookEntry(BaseModel):
 class ProcessingConfig(BaseModel):
     """Processing pipeline configuration."""
     summary: bool = True
+    ai_summary: dict = Field(default_factory=lambda: {
+        "enabled": False,
+        "provider": "openai",
+        "base_url": "",
+        "model": "",
+        "api_key": "",
+        "prompt": "",
+        "max_tokens": 200,
+    }, description="AI summary configuration. Set enabled=true and provide api_key, model, base_url (optional) to enable LLM summarization.")
     translate: bool = False
     attachment_info: bool = True
     body_max_chars: int = Field(0, ge=0, description="0 = unlimited")

@@ -6,14 +6,14 @@ import json
 import logging
 import os
 import secrets
-import sys
+import sqlite3
 import time
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Query, Request, Path as PathParam
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s %(name)s %(levelname)s: %(message)s',
-    handlers=[logging.StreamHandler(sys.stderr)],
+    handlers=[logging.StreamHandler()],
 )
 
 _AUTH_BYPASS_PATHS = frozenset({'/api/health', '/api/auth'})
@@ -33,7 +33,7 @@ from mailpush.delivery import dispatcher as delivery
 from mailpush.api.schemas import (
     EmailAccount, WebhookRegistration, WebhookEntry,
     HealthResponse, AccountStatus,
-    AppConfig, ReplyRequest, NotifyRequest, EmailNotification,
+    AppConfig, ReplyRequest, NotifyRequest, EmailNotification, EmailSummary,
 )
 
 MAX_BODY_SIZE = 64 * 1024   # 64KB max request body
@@ -52,6 +52,8 @@ def _add_recent(notification: EmailNotification) -> None:
     _recent_emails.insert(0, notification)
     if len(_recent_emails) > MAX_RECENT:
         _recent_emails.pop()
+    # Also persist to SQLite
+    _save_email(notification)
 
 
 # ── Rate limiter ──────────────────────────────────────
@@ -76,6 +78,114 @@ class _RateLimiter:
         return True
 
 _rate_limiter = _RateLimiter()
+
+
+# ── SQLite email store ────────────────────────────────
+
+_DB_PATH = Path(os.environ.get('XDG_CONFIG_HOME', os.path.expanduser('~/.config'))) / 'mailpush' / 'emails.db'
+
+
+def _init_db() -> sqlite3.Connection:
+    """Initialize SQLite store for full email persistence."""
+    _DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(_DB_PATH))
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS emails (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_id TEXT UNIQUE NOT NULL,
+            account TEXT NOT NULL,
+            timestamp TEXT NOT NULL,
+            sender TEXT NOT NULL,
+            subject TEXT NOT NULL,
+            body_text TEXT DEFAULT '',
+            body_html TEXT DEFAULT '',
+            body_preview TEXT DEFAULT '',
+            summary TEXT DEFAULT '{}',
+            attachments TEXT DEFAULT '[]',
+            raw_headers TEXT DEFAULT '{}',
+            created_at TEXT DEFAULT (datetime('now'))
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_emails_account ON emails(account)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_emails_ts ON emails(timestamp DESC)")
+    conn.commit()
+    return conn
+
+
+def _save_email(notification: EmailNotification) -> None:
+    """Save a full email notification to SQLite."""
+    try:
+        conn = _init_db()
+        # EmailNotification has: body_full, body_preview
+        # Map appropriate fields
+        body_text = getattr(notification, 'body_full', '')
+        body_preview = getattr(notification, 'body_preview', '')
+        summary = getattr(notification, 'summary', EmailSummary())
+        attachments = getattr(notification, 'attachments', [])
+        conn.execute(
+            """INSERT OR IGNORE INTO emails
+               (event_id, account, timestamp, sender, subject,
+                body_text, body_html, body_preview, summary, attachments, raw_headers)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                f"{notification.account}-{notification.timestamp}",
+                notification.account,
+                notification.timestamp,
+                notification.sender,
+                notification.subject,
+                body_text,
+                '',
+                body_preview,
+                json.dumps(summary.model_dump() if hasattr(summary, 'model_dump') else summary, ensure_ascii=False),
+                json.dumps([a.model_dump() if hasattr(a, 'model_dump') else a for a in attachments], ensure_ascii=False),
+                '{}',
+            ),
+        )
+        conn.commit()
+        conn.close()
+    except Exception as exc:
+        log.warning("Failed to save email to SQLite: %s", exc)
+
+
+def _query_emails(account: Optional[str] = None, limit: int = 50, offset: int = 0, search: str = '') -> list[dict]:
+    """Query persisted emails from SQLite."""
+    try:
+        conn = _init_db()
+        where = []
+        params = []
+        if account:
+            where.append("account = ?")
+            params.append(account)
+        if search:
+            where.append("(subject LIKE ? OR sender LIKE ? OR body_text LIKE ?)")
+            like = f"%{search}%"
+            params.extend([like, like, like])
+        where_clause = ("WHERE " + " AND ".join(where)) if where else ""
+        rows = conn.execute(
+            f"SELECT id, event_id, account, timestamp, sender, subject, body_preview, body_text, summary, attachments, created_at "
+            f"FROM emails {where_clause} ORDER BY timestamp DESC LIMIT ? OFFSET ?",
+            params + [limit, offset],
+        ).fetchall()
+        conn.close()
+        return [
+            {
+                "id": r[0],
+                "event_id": r[1],
+                "account": r[2],
+                "timestamp": r[3],
+                "sender": r[4],
+                "subject": r[5],
+                "body_preview": r[6],
+                "body_text": r[7],
+                "summary": json.loads(r[8]) if r[8] else {},
+                "attachments": json.loads(r[9]) if r[9] else [],
+                "created_at": r[10],
+            }
+            for r in rows
+        ]
+    except Exception as exc:
+        log.warning("Failed to query emails from SQLite: %s", exc)
+        return []
 
 
 # ── Sensitive field names for config redaction ──────
@@ -262,14 +372,27 @@ async def list_accounts():
     cfg = config_mgr.load()
     safe = []
     for acct in cfg.get('accounts', []):
-        safe.append({
+        entry = {
             'name': acct.get('name'),
             'host': acct.get('host'),
             'port': acct.get('port', 993),
             'username': acct.get('username'),
             'password': '***',
             'ssl': acct.get('ssl', True),
-        })
+        }
+        p = acct.get('proxy')
+        if isinstance(p, dict) and p.get('enabled'):
+            entry['proxy'] = {
+                'enabled': True,
+                'type': p.get('type', 'http'),
+                'host': p.get('host', ''),
+                'port': p.get('port'),
+                'username': p.get('username', ''),
+                'password': '***' if p.get('password') else '',
+            }
+        else:
+            entry['proxy'] = {'enabled': False}
+        safe.append(entry)
     statuses = imap.get_status()
     for acct in safe:
         name = acct['name']
@@ -297,9 +420,16 @@ async def add_account(request: Request):
         if field not in body:
             raise HTTPException(400, f'Missing required field: {field}')
     accounts = cfg.setdefault('accounts', [])
-    # Replace if name exists
+    # Replace if name exists — preserve secrets when the client sends '***'
     for i, a in enumerate(accounts):
         if a.get('name') == body['name']:
+            if body.get('password') == '***':
+                body['password'] = a.get('password', '')
+            # Preserve proxy password if masked
+            new_proxy = body.get('proxy')
+            old_proxy = a.get('proxy') or {}
+            if isinstance(new_proxy, dict) and new_proxy.get('password') == '***':
+                new_proxy['password'] = old_proxy.get('password', '')
             accounts[i] = body
             break
     else:
@@ -391,12 +521,58 @@ async def get_state():
 
 
 @app.get('/api/emails')
-async def list_emails(account: Optional[str] = None, limit: int = 50):
+async def list_emails(account: Optional[str] = None, limit: int = 50, search: str = ''):
+    """List recent emails from in-memory buffer (full body from SQLite if available)."""
     results = _recent_emails
     if account:
         results = [e for e in results if e.account == account]
+    if search:
+        sl = search.lower()
+        results = [e for e in results if sl in e.subject.lower() or sl in e.sender.lower()]
     results = results[:max(1, min(limit, 200))]
     return {'emails': results, 'total': len(results)}
+
+
+@app.get('/api/emails/search')
+async def search_emails(account: Optional[str] = None, limit: int = 20, offset: int = 0, q: str = ''):
+    """Search persisted emails from SQLite, returns full body_text."""
+    return {
+        'emails': _query_emails(account=account, limit=limit, offset=offset, search=q),
+        'total': len(_query_emails(account=account, limit=9999, search=q)),
+    }
+
+
+@app.get('/api/emails/{email_id}')
+async def get_email(email_id: int = PathParam(...)):
+    """Get a single persisted email by its SQLite ID, including full body_text."""
+    try:
+        conn = _init_db()
+        row = conn.execute(
+            "SELECT id, event_id, account, timestamp, sender, subject, body_text, body_html, body_preview, summary, attachments, raw_headers, created_at "
+            "FROM emails WHERE id = ?", (email_id,)
+        ).fetchone()
+        conn.close()
+        if not row:
+            raise HTTPException(404, f"Email #{email_id} not found")
+        return {
+            "id": row[0],
+            "event_id": row[1],
+            "account": row[2],
+            "timestamp": row[3],
+            "sender": row[4],
+            "subject": row[5],
+            "body_text": row[6],
+            "body_html": row[7],
+            "body_preview": row[8],
+            "summary": json.loads(row[9]) if row[9] else {},
+            "attachments": json.loads(row[10]) if row[10] else [],
+            "raw_headers": json.loads(row[11]) if row[11] else {},
+            "created_at": row[12],
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(500, str(exc))
 
 
 # ── Config ───────────────────────────────────────────
@@ -404,6 +580,8 @@ async def list_emails(account: Optional[str] = None, limit: int = 50):
 @app.get('/api/config')
 async def get_config():
     cfg = config_mgr.load()
+    # Denormalize processing.ai_summary for dashboard convenience
+    cfg['ai_summary'] = cfg.get('processing', {}).get('ai_summary', {})
     return _redact_dict(cfg)
 
 
@@ -414,9 +592,32 @@ async def update_config(request: Request):
         body = await request.json()
     except Exception:
         raise HTTPException(400, 'Invalid JSON')
+    # If frontend sends ai_summary at top level, move it into processing
+    ai_summary = body.pop('ai_summary', None)
+    if isinstance(ai_summary, dict):
+        processing = body.setdefault('processing', cfg.get('processing', {}))
+        processing['ai_summary'] = ai_summary
     cfg.update(body)
     config_mgr.save(cfg)
     return {'ok': True, 'redacted': _redact_dict(cfg)}
+
+
+@app.post('/api/ai-summary/test')
+async def test_ai_summary(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(400, 'Invalid JSON')
+
+    from mailpush.mail.summarizer import summarize_with_ai
+    cfg = config_mgr.load()
+    default_cfg = cfg.get('processing', {}).get('ai_summary', {})
+    ai_cfg = body.get('ai_summary') or body if isinstance(body, dict) and any(k in body for k in ('base_url','model','api_key','enabled','provider')) else default_cfg
+    sample = body.get('text') or '测试邮件：你的快递已发货，订单号 SF123456，预计明天到达，请留意查收。'
+    summary = await summarize_with_ai(sample, ai_cfg)
+    if summary is None:
+        raise HTTPException(400, 'AI 摘要未启用或配置不完整')
+    return {'ok': True, 'summary': summary}
 
 
 # ── Deliveries ───────────────────────────────────────

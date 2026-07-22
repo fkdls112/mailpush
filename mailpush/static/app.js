@@ -279,6 +279,15 @@ async function refreshConfig() {
     document.getElementById('cfg-attachments').checked = d.attachment_info;
     document.getElementById('cfg-merge').checked       = d.merge_batch;
     document.getElementById('cfg-merge-interval').value = d.merge_interval;
+
+    const ai = d.ai_summary || {};
+    document.getElementById('cfg-ai-enabled').checked    = ai.enabled || false;
+    document.getElementById('cfg-ai-provider').value     = ai.provider || 'openai';
+    document.getElementById('cfg-ai-model').value        = ai.model || '';
+    document.getElementById('cfg-ai-base_url').value     = ai.base_url || '';
+    document.getElementById('cfg-ai-api_key').value      = ai.api_key || '';
+    document.getElementById('cfg-ai-max_tokens').value   = ai.max_tokens || 200;
+    document.getElementById('cfg-ai-prompt').value       = ai.prompt || '';
   } catch (e) {
     addLog('error', '配置加载失败: ' + e.message);
   }
@@ -291,6 +300,15 @@ async function saveConfig() {
     attachment_info:  document.getElementById('cfg-attachments').checked,
     merge_batch:      document.getElementById('cfg-merge').checked,
     merge_interval:   parseInt(document.getElementById('cfg-merge-interval').value) || 30,
+    ai_summary: {
+      enabled:    document.getElementById('cfg-ai-enabled').checked,
+      provider:   document.getElementById('cfg-ai-provider').value,
+      model:      document.getElementById('cfg-ai-model').value.trim(),
+      base_url:   document.getElementById('cfg-ai-base_url').value.trim(),
+      api_key:    document.getElementById('cfg-ai-api_key').value.trim(),
+      max_tokens: parseInt(document.getElementById('cfg-ai-max_tokens').value) || 200,
+      prompt:     document.getElementById('cfg-ai-prompt').value.trim(),
+    },
     filters:          {},
     smtp_reply_from:  '',
   };

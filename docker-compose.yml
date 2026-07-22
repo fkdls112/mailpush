@@ -13,6 +13,7 @@ services:
       # Mount config directory so config.json persists across rebuilds
       - /path/to/your/config:/home/mailpush/.config/mailpush
       # - ./mailpush:/home/mailpush/mailpush  # Uncomment for hot-reload
+    user: "${UID:-1000}:${GID:-1000}"
     environment:
       - MAILPUSH_CONFIG=/home/mailpush/.config/mailpush/config.json
       - TZ=Asia/Shanghai

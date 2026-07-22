@@ -20,8 +20,17 @@ DEFAULT_CONFIG = """{
   "delivery_targets": [],
   "deliveries": {},
   "routes": [],
-  "processing": {
+    "processing": {
     "summary": true,
+    "ai_summary": {
+      "enabled": false,
+      "provider": "openai",
+      "base_url": "",
+      "model": "",
+      "api_key": "",
+      "prompt": "",
+      "max_tokens": 200
+    },
     "translate": false,
     "attachment_info": true,
     "body_max_chars": 0,
@@ -94,18 +103,56 @@ def _migrate_processing(cfg: dict) -> dict:
     """Move top-level processing flags into the processing sub-object.
 
     Handles configs that still have translate/summary/etc at root level.
+    Also migrates legacy top-level `ai_summary` (bool/dict) and `ai` (dict)
+    into processing.ai_summary.
     """
     processing = cfg.setdefault('processing', {})
-    for key in ('summary', 'translate', 'attachment_info', 'merge_batch', 'merge_interval', 'body_max_chars'):
+    for key in ('summary', 'translate', 'attachment_info', 'merge_batch', 'merge_interval', 'body_max_chars', 'ai_summary'):
         if key in cfg and key not in processing:
             processing[key] = cfg.pop(key)
-    # Apply defaults
+
+    # Normalize ai_summary into a dict
+    ai = processing.setdefault('ai_summary', {})
+    if isinstance(ai, bool):
+        processing['ai_summary'] = {'enabled': ai}
+        ai = processing['ai_summary']
+    elif not isinstance(ai, dict):
+        processing['ai_summary'] = {'enabled': bool(ai)}
+        ai = processing['ai_summary']
+
+    ai.setdefault('enabled', False)
+    ai.setdefault('provider', 'openai')
+    ai.setdefault('base_url', '')
+    ai.setdefault('model', '')
+    ai.setdefault('api_key', '')
+    ai.setdefault('prompt', '')
+    ai.setdefault('max_tokens', 200)
+
+    # Merge legacy top-level "ai" object if present
+    legacy_ai = cfg.pop('ai', None)
+    if isinstance(legacy_ai, dict):
+        for k in ('provider', 'base_url', 'model', 'api_key', 'prompt', 'max_tokens'):
+            if legacy_ai.get(k) and not ai.get(k):
+                ai[k] = legacy_ai[k]
+        # If no explicit provider, infer from model
+        if not legacy_ai.get('provider') and legacy_ai.get('model'):
+            ai['provider'] = legacy_ai['model']
+        # Top-level ai_summary bool may have been migrated already; ensure enabled
+        if cfg.get('ai_summary') is True:
+            ai['enabled'] = True
+            cfg.pop('ai_summary', None)
+
+    # Apply other defaults
     processing.setdefault('summary', True)
     processing.setdefault('translate', False)
     processing.setdefault('attachment_info', True)
     processing.setdefault('body_max_chars', 0)
     processing.setdefault('merge_batch', True)
     processing.setdefault('merge_interval', 30)
+
+    # Clean up legacy top-level keys
+    cfg.pop('ai_summary', None)
+    cfg.pop('ai', None)
     return cfg
 
 
