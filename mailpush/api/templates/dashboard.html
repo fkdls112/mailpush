@@ -1092,7 +1092,7 @@ label.checkbox,
 
           <div class="hint-box">
             <div><strong>配置文件路径</strong></div>
-            <div><code>/home/fd0609/mailpush-docker-config/config.json</code></div>
+            <div><code>/path/to/your/config/config.json</code></div>
             <div class="small">容器内路径：<code>/home/mailpush/.config/mailpush/config.json</code></div>
           </div>
         </div>
@@ -1326,7 +1326,7 @@ label.checkbox,
 <script>
 const TOKEN_KEY = "mailpush.apiToken";
 const REFRESH_INTERVAL_MS = 30000;
-const CONFIG_PATH = "/home/fd0609/mailpush-docker-config/config.json";
+const CONFIG_PATH = "/path/to/your/config/config.json";
 
 let apiToken = localStorage.getItem(TOKEN_KEY) || "";
 let activeView = "overview";
@@ -2217,7 +2217,7 @@ async function testAiSummarySettings() {
 }
 
 function showRestartHint() {
-  alert(`请在项目目录执行：\\n\\ndocker compose -f /home/fd0609/nas-hermes/mailpush-v9/docker-compose.yml restart mailpush\\n\\n配置文件：${CONFIG_PATH}`);
+  alert(`请在项目目录执行：\\n\\ndocker compose restart mailpush\\n\\n配置文件：${CONFIG_PATH}`);
 }
 
 function openModal(id) {
