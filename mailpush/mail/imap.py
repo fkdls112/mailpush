@@ -24,6 +24,7 @@ _account_statuses: dict[str, AccountStatus] = {}
 _email_count_today: dict[str, int] = {}
 _state_file: Path = Path.home() / '.config' / 'mailpush' / 'state.json'
 _active_tasks: list = []  # running watcher/merge tasks, for reconnect
+_current_cfg: dict = {}   # last app config, so merge timer can access ai_summary etc.
 
 
 def _load_state() -> dict:
@@ -79,6 +80,8 @@ async def connect_all(
         cfg: App config (processing sub-object or flat keys, filters)
         on_email: Async callback invoked with EmailNotification for each new email
     """
+    global _current_cfg
+    _current_cfg = cfg
     state = _load_state()
     proc = _get_processing(cfg)
     tasks = []
@@ -144,9 +147,9 @@ async def _merge_timer(interval: int, on_email: OnEmailCallback):
             count = len(batch)
             if count == 1:
                 sender, subject, body, atts = batch[0]
-                await _build_and_push(name, [(sender, subject, body, atts)], {}, on_email)
+                await _build_and_push(name, [(sender, subject, body, atts)], _current_cfg, on_email)
             else:
-                await _build_merged(name, batch, {}, on_email)
+                await _build_merged(name, batch, _current_cfg, on_email)
 
 
 # ── Account watcher ──────────────────────────────────
@@ -380,16 +383,18 @@ async def _build_merged(
             if cn and cn != subject:
                 lines.append(f'   🌐 {cn}')
         summary_data = await summarizer.extract(body, proc.get('ai_summary')) if summary_enabled else None
-        if summary_data and (summary_data.ips or summary_data.amounts or summary_data.ai_summary):
-            parts = []
+        if summary_data:
             if summary_data.ai_summary:
-                parts.append(summary_data.ai_summary)
-            if summary_data.ips:
-                parts.append('IP: ' + ' / '.join(summary_data.ips[:2]))
-            if summary_data.amounts:
-                parts.append(' / '.join(summary_data.amounts[:2]))
-            if parts:
-                lines.append(f'   📝 {" | ".join(parts)}')
+                # AI 摘要可用时优先展示，避免规则提取的碎片噪音
+                lines.append(f'   📝 {summary_data.ai_summary}')
+            else:
+                parts = []
+                if summary_data.ips:
+                    parts.append('IP: ' + ' / '.join(summary_data.ips[:2]))
+                if summary_data.amounts:
+                    parts.append(' / '.join(summary_data.amounts[:2]))
+                if parts:
+                    lines.append(f'   📝 {" | ".join(parts)}')
         if atts:
             lines.append(f'   📎 {", ".join(a["name"] for a in atts[:3])}')
     if len(filtered) > 5:
